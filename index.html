@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bigblue Warehouse Scorecard · Week 25 · 25 June 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green:  #dcfce7; --green-txt: #166534;
+    --red:    #fee2e2; --red-txt:   #991b1b;
+    --avg-bg: #eff6ff; --avg-txt:   #1e40af;
+    --hdr:    #1e1b4b;
+    --card:   #ffffff;
+    --bg:     #f1f5f9;
+    --border: #e2e8f0;
+    --muted:  #64748b;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: var(--bg); color: #1e293b; }
+
+  /* ── Top bar ── */
+  .topbar { background: var(--hdr); color: white; padding: 18px 32px;
+             display: flex; align-items: center; justify-content: space-between;
+             position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px #0004; }
+  .topbar h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: .04em; }
+  .topbar .week { font-size: .8rem; color: #a5b4fc; margin-top: 2px; }
+  .topbar .legend { display: flex; gap: 12px; font-size: .75rem; }
+  .topbar .leg { display: flex; align-items: center; gap: 5px; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; }
+
+  /* ── Nav ── */
+  .nav { background: white; border-bottom: 1px solid var(--border);
+          padding: 0 32px; display: flex; gap: 4px; overflow-x: auto;
+          position: sticky; top: 57px; z-index: 99; }
+  .nav a { padding: 10px 14px; font-size: .82rem; font-weight: 500; color: var(--muted);
+            text-decoration: none; border-bottom: 2px solid transparent; white-space: nowrap; }
+  .nav a:hover { color: var(--hdr); border-color: var(--hdr); }
+
+  /* ── Cards ── */
+  .main { max-width: 1300px; margin: 0 auto; padding: 28px 24px 60px; }
+  .metric-card { background: var(--card); border: 1px solid var(--border);
+                  border-radius: 12px; margin-bottom: 28px;
+                  box-shadow: 0 1px 3px #0001; overflow: hidden; }
+  .card-header { padding: 18px 24px 14px; display: flex;
+                  align-items: flex-start; justify-content: space-between;
+                  border-bottom: 1px solid var(--border); }
+  .card-header h2 { font-size: 1.05rem; font-weight: 700; }
+  .card-sub { font-size: .75rem; color: var(--muted); margin-top: 3px; display: block; }
+  .mb-link { font-size: .78rem; color: #6366f1; text-decoration: none; font-weight: 500;
+              white-space: nowrap; padding: 6px 12px; border: 1px solid #c7d2fe;
+              border-radius: 6px; background: #eef2ff; }
+  .mb-link:hover { background: #e0e7ff; }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  th { padding: 10px 14px; text-align: center; background: #f8fafc;
+        font-weight: 600; color: var(--muted); font-size: .75rem;
+        border-bottom: 2px solid var(--border); white-space: nowrap; }
+  th.wk-label, td.wk-label { text-align: left; }
+  td { padding: 9px 14px; text-align: center; border-bottom: 1px solid var(--border);
+        transition: background .15s; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fafc !important; }
+
+  /* ── Cell colors ── */
+  td.top { background: var(--green); color: var(--green-txt); font-weight: 600; }
+  td.bot { background: var(--red);   color: var(--red-txt);   font-weight: 600; }
+  td.avg-col { background: var(--avg-bg); color: var(--avg-txt); font-weight: 600; }
+  th.avg-col { background: var(--avg-bg); color: var(--avg-txt); }
+
+  /* ── Badges & arrows ── */
+  .badge { background: #6366f1; color: white; font-size: .65rem; font-weight: 700;
+            padding: 1px 6px; border-radius: 20px; margin-left: 6px;
+            vertical-align: middle; letter-spacing: .04em; }
+  .arr { font-size: .7rem; margin-left: 3px; }
+  .arr.up { color: #16a34a; }
+  .arr.dn { color: #dc2626; }
+  .arr.flat { color: var(--muted); }
+
+  /* ── Sparklines ── */
+  .spark { display: block; width: 80px; height: 24px; margin: 4px auto 0; }
+
+  /* ── Info banner ── */
+  .info-banner { background: white; border: 1px solid var(--border); border-radius: 10px;
+                  padding: 14px 20px; margin-bottom: 24px; font-size: .82rem;
+                  color: #334155; line-height: 1.6; }
+  .info-banner strong { color: #1e293b; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 20px;
+           font-size: .75rem; font-weight: 600; }
+  .pill.green { background: var(--green); color: var(--green-txt); }
+  .pill.red   { background: var(--red);   color: var(--red-txt); }
+  .pill.blue  { background: var(--avg-bg); color: var(--avg-txt); }
+
+  /* ── Footer ── */
+  .footer { text-align: center; font-size: .72rem; color: var(--muted);
+             padding: 20px; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div>
+    <div class="h1">BIGBLUE · Warehouse Scorecard</div>
+    <div class="week">Week 25 · 25 June 2026</div>
+  </div>
+  <div class="legend">
+    <div class="leg"><div class="swatch" style="background:#86efac"></div> Top performer</div>
+    <div class="leg"><div class="swatch" style="background:#fca5a5"></div> Bottom 3</div>
+    <div class="leg"><div class="swatch" style="background:#bfdbfe"></div> Network avg</div>
+  </div>
+</header>
+
+<nav class="nav">
+  <a href="#metric-26473">B2C Pack</a>
+<a href="#metric-26435">B2C NAC</a>
+<a href="#metric-26434">B2C Pick</a>
+<a href="#metric-26470">Ship</a>
+<a href="#metric-26471">Inbound (Receive)</a>
+<a href="#metric-26472">Replenishments</a>
+</nav>
+
+<main class="main">
+  <div class="info-banner">
+    <strong>How to read this scorecard</strong> — Each table shows the last 8 weeks of productivity data (UPH) per warehouse.
+    For each week, the <span class="pill green">top performer</span> is highlighted green and the
+    <span class="pill red">bottom 3</span> are highlighted red. Rankings reset every week — a warehouse can move between categories.
+    The <span class="pill blue">Network avg</span> column shows the mean across all warehouses for that week.
+    Arrows (↑↓) indicate change vs the previous week. Click <em>Open in Metabase</em> on any metric to explore the underlying data.
+  </div>
+  
+<section class="metric-card" id="metric-26473">
+  <div class="card-header">
+    <div>
+      <h2>B2C Pack</h2>
+      <span class="card-sub">Last 7 weeks · UPH</span>
+    </div>
+    <a class="mb-link" href="https://metabase.internal.bigblue.co/question/26473" target="_blank">Open in Metabase ↗</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th class="wk-label">Week</th><th>EU-DEU-001<canvas class="spark" data-wh="EU-DEU-001" data-metric="26473"></canvas></th><th>EU-ESP-001<canvas class="spark" data-wh="EU-ESP-001" data-metric="26473"></canvas></th><th>EU-FRA-003<canvas class="spark" data-wh="EU-FRA-003" data-metric="26473"></canvas></th><th>EU-FRA-004<canvas class="spark" data-wh="EU-FRA-004" data-metric="26473"></canvas></th><th>EU-FRA-007<canvas class="spark" data-wh="EU-FRA-007" data-metric="26473"></canvas></th><th>EU-FRA-008<canvas class="spark" data-wh="EU-FRA-008" data-metric="26473"></canvas></th><th>EU-GBR-002<canvas class="spark" data-wh="EU-GBR-002" data-metric="26473"></canvas></th><th class="avg-col">Network avg</th></tr></thead>
+      <tbody><tr><td class='wk-label'>14 Jun <span class="badge">latest</span></td><td class="top">149.2<span class="arr dn" title="-36.0%">↓</span></td><td class="bot">103.6<span class="arr up" title="+3.5%">↑</span></td><td>—</td><td class="bot">72.6<span class="arr flat">→</span></td><td class="bot">98.7<span class="arr dn" title="-17.5%">↓</span></td><td>108.5<span class="arr up" title="+8.2%">↑</span></td><td>—</td><td class="avg-col">106.5</td></tr><tr><td class='wk-label'>07 Jun</td><td class="top">233.3<span class="arr dn" title="-19.7%">↓</span></td><td class="bot">100.1<span class="arr dn" title="-2.9%">↓</span></td><td>153.9<span class="arr up" title="+5.1%">↑</span></td><td class="bot">72.7<span class="arr dn" title="-16.1%">↓</span></td><td>119.6<span class="arr up" title="+17.7%">↑</span></td><td>100.3<span class="arr dn" title="-5.5%">↓</span></td><td class="bot">73.2<span class="arr dn" title="-39.4%">↓</span></td><td class="avg-col">121.9</td></tr><tr><td class='wk-label'>31 May</td><td class="top">290.6<span class="arr up" title="+78.7%">↑</span></td><td class="bot">103.1<span class="arr flat">→</span></td><td>146.4<span class="arr up" title="+6.6%">↑</span></td><td class="bot">86.7<span class="arr up" title="+13.9%">↑</span></td><td class="bot">101.6<span class="arr up" title="+20.4%">↑</span></td><td>106.1<span class="arr flat">→</span></td><td>120.7<span class="arr dn" title="-4.8%">↓</span></td><td class="avg-col">136.5</td></tr><tr><td class='wk-label'>24 May</td><td class="top">162.6<span class="arr dn" title="-47.6%">↓</span></td><td class="bot">104.3<span class="arr up" title="+4.5%">↑</span></td><td>137.4<span class="arr dn" title="-11.4%">↓</span></td><td class="bot">76.1<span class="arr up" title="+9.5%">↑</span></td><td class="bot">84.4<span class="arr dn" title="-14.1%">↓</span></td><td>107.1<span class="arr up" title="+2.4%">↑</span></td><td>126.8<span class="arr up" title="+16.9%">↑</span></td><td class="avg-col">114.1</td></tr><tr><td class='wk-label'>17 May</td><td class="top">310.3<span class="arr up" title="+42.8%">↑</span></td><td class="bot">99.8<span class="arr dn" title="-6.3%">↓</span></td><td>155.0<span class="arr up" title="+2.2%">↑</span></td><td class="bot">69.5<span class="arr up" title="+9.4%">↑</span></td><td class="bot">98.2<span class="arr dn" title="-10.5%">↓</span></td><td>104.6<span class="arr dn" title="-3.4%">↓</span></td><td>108.5<span class="arr dn" title="-22.7%">↓</span></td><td class="avg-col">135.1</td></tr><tr><td class='wk-label'>10 May</td><td class="top">217.3<span class="arr up" title="+9.3%">↑</span></td><td class="bot">106.5<span class="arr flat">→</span></td><td>151.7<span class="arr up" title="+7.1%">↑</span></td><td class="bot">63.5<span class="arr dn" title="-2.3%">↓</span></td><td>109.7<span class="arr dn" title="-4.8%">↓</span></td><td class="bot">108.3<span class="arr dn" title="-16.1%">↓</span></td><td>140.3<span class="arr up" title="+6.4%">↑</span></td><td class="avg-col">128.2</td></tr><tr><td class='wk-label'>03 May</td><td class="top">198.9</td><td class="bot">107.2</td><td>141.6</td><td class="bot">65.0</td><td class="bot">115.2</td><td>129.1</td><td>131.9</td><td class="avg-col">127.0</td></tr></tbody>
+    </table>
+  </div>
+  <script>
+    (function(){
+      var data  = {"EU-DEU-001": [198.9, 217.3, 310.3, 162.6, 290.6, 233.3, 149.2], "EU-ESP-001": [107.2, 106.5, 99.8, 104.3, 103.1, 100.1, 103.6], "EU-FRA-003": [141.6, 151.7, 155.0, 137.4, 146.4, 153.9, null], "EU-FRA-004": [65.0, 63.5, 69.5, 76.1, 86.7, 72.7, 72.6], "EU-FRA-007": [115.2, 109.7, 98.2, 84.4, 101.6, 119.6, 98.7], "EU-FRA-008": [129.1, 108.3, 104.6, 107.1, 106.1, 100.3, 108.5], "EU-GBR-002": [131.9, 140.3, 108.5, 126.8, 120.7, 73.2, null]};
+      var weeks = ["03 May", "10 May", "17 May", "24 May", "31 May", "07 Jun", "14 Jun"];
+      document.querySelectorAll('[data-metric="26473"]').forEach(function(canvas) {
+        var wh   = canvas.getAttribute('data-wh');
+        var vals = data[wh];
+        var ctx  = canvas.getContext('2d');
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: weeks,
+            datasets: [{
+              data: vals,
+              borderColor: '#6366f1',
+              borderWidth: 1.5,
+              pointRadius: 0,
+              tension: 0.3,
+              fill: false,
+            }]
+          },
+          options: {
+            animation: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: true } },
+            scales: { x: { display: false }, y: { display: false } },
+          }
+        });
+      });
+    })();
+  </script>
+</section>
+
+<section class="metric-card" id="metric-26435">
+  <div class="card-header">
+    <div>
+      <h2>B2C NAC</h2>
+      <span class="card-sub">Last 8 weeks · UPH</span>
+    </div>
+    <a class="mb-link" href="https://metabase.internal.bigblue.co/question/26435" target="_blank">Open in Metabase ↗</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th class="wk-label">Week</th><th>EU-DEU-001<canvas class="spark" data-wh="EU-DEU-001" data-metric="26435"></canvas></th><th>EU-ESP-001<canvas class="spark" data-wh="EU-ESP-001" data-metric="26435"></canvas></th><th>EU-FRA-003<canvas class="spark" data-wh="EU-FRA-003" data-metric="26435"></canvas></th><th>EU-FRA-004<canvas class="spark" data-wh="EU-FRA-004" data-metric="26435"></canvas></th><th>EU-FRA-007<canvas class="spark" data-wh="EU-FRA-007" data-metric="26435"></canvas></th><th>EU-FRA-008<canvas class="spark" data-wh="EU-FRA-008" data-metric="26435"></canvas></th><th>EU-GBR-002<canvas class="spark" data-wh="EU-GBR-002" data-metric="26435"></canvas></th><th class="avg-col">Network avg</th></tr></thead>
+      <tbody><tr><td class='wk-label'>14 Jun <span class="badge">latest</span></td><td>3.2<span class="arr up" title="+4.6%">↑</span></td><td>2.1<span class="arr flat">→</span></td><td>—</td><td>2.4<span class="arr up" title="+5.0%">↑</span></td><td>2.6<span class="arr dn" title="-3.8%">↓</span></td><td>3.4<span class="arr dn" title="-9.3%">↓</span></td><td>—</td><td class="avg-col">2.7</td></tr><tr><td class='wk-label'>07 Jun</td><td>3.0<span class="arr flat">→</span></td><td>2.1<span class="arr dn" title="-2.9%">↓</span></td><td>3.5<span class="arr up" title="+2.2%">↑</span></td><td>2.3<span class="arr dn" title="-8.5%">↓</span></td><td>2.7<span class="arr dn" title="-4.5%">↓</span></td><td>3.7<span class="arr flat">→</span></td><td>3.1<span class="arr dn" title="-2.9%">↓</span></td><td class="avg-col">2.9</td></tr><tr><td class='wk-label'>31 May</td><td>3.0<span class="arr dn" title="-7.3%">↓</span></td><td>2.2<span class="arr dn" title="-4.9%">↓</span></td><td>3.4<span class="arr flat">→</span></td><td>2.5<span class="arr up" title="+6.1%">↑</span></td><td>2.9<span class="arr up" title="+6.9%">↑</span></td><td>3.8<span class="arr flat">→</span></td><td>3.2<span class="arr up" title="+12.3%">↑</span></td><td class="avg-col">3.0</td></tr><tr><td class='wk-label'>24 May</td><td>3.3<span class="arr dn" title="-2.3%">↓</span></td><td>2.3<span class="arr up" title="+8.6%">↑</span></td><td>3.4<span class="arr dn" title="-11.1%">↓</span></td><td>2.3<span class="arr flat">→</span></td><td>2.7<span class="arr dn" title="-6.4%">↓</span></td><td>3.8<span class="arr up" title="+9.7%">↑</span></td><td>2.8<span class="arr dn" title="-7.0%">↓</span></td><td class="avg-col">2.9</td></tr><tr><td class='wk-label'>17 May</td><td>3.3<span class="arr flat">→</span></td><td>2.1<span class="arr flat">→</span></td><td>3.8<span class="arr up" title="+2.4%">↑</span></td><td>2.3<span class="arr up" title="+21.0%">↑</span></td><td>2.9<span class="arr up" title="+2.4%">↑</span></td><td>3.4<span class="arr up" title="+9.1%">↑</span></td><td>3.0<span class="arr up" title="+13.8%">↑</span></td><td class="avg-col">3.0</td></tr><tr><td class='wk-label'>10 May</td><td>3.3<span class="arr up" title="+7.8%">↑</span></td><td>2.1<span class="arr dn" title="-4.1%">↓</span></td><td>3.7<span class="arr up" title="+6.2%">↑</span></td><td>1.9<span class="arr dn" title="-9.7%">↓</span></td><td>2.8<span class="arr dn" title="-19.1%">↓</span></td><td>3.1<span class="arr flat">→</span></td><td>2.7<span class="arr up" title="+17.5%">↑</span></td><td class="avg-col">2.8</td></tr><tr><td class='wk-label'>03 May</td><td>3.1<span class="arr flat">→</span></td><td>2.2<span class="arr flat">→</span></td><td>3.5<span class="arr flat">→</span></td><td>2.1<span class="arr up" title="+2.1%">↑</span></td><td>3.4<span class="arr up" title="+13.9%">↑</span></td><td>3.2<span class="arr dn" title="-5.5%">↓</span></td><td>2.3<span class="arr dn" title="-5.5%">↓</span></td><td class="avg-col">2.8</td></tr><tr><td class='wk-label'>26 Apr</td><td>3.1</td><td>2.2</td><td>3.5</td><td>2.1</td><td>3.0</td><td>3.4</td><td>2.4</td><td class="avg-col">2.8</td></tr></tbody>
+    </table>
+  </div>
+  <script>
+    (function(){
+      var data  = {"EU-DEU-001": [3.06, 3.05, 3.29, 3.33, 3.25, 3.02, 3.03, 3.17], "EU-ESP-001": [2.24, 2.22, 2.13, 2.13, 2.31, 2.2, 2.14, 2.1], "EU-FRA-003": [3.52, 3.47, 3.68, 3.77, 3.36, 3.38, 3.45, null], "EU-FRA-004": [2.09, 2.13, 1.93, 2.33, 2.33, 2.47, 2.26, 2.37], "EU-FRA-007": [3.03, 3.45, 2.79, 2.86, 2.67, 2.86, 2.73, 2.63], "EU-FRA-008": [3.37, 3.18, 3.14, 3.43, 3.76, 3.81, 3.74, 3.39], "EU-GBR-002": [2.4, 2.27, 2.67, 3.04, 2.82, 3.17, 3.08, null]};
+      var weeks = ["26 Apr", "03 May", "10 May", "17 May", "24 May", "31 May", "07 Jun", "14 Jun"];
+      document.querySelectorAll('[data-metric="26435"]').forEach(function(canvas) {
+        var wh   = canvas.getAttribute('data-wh');
+        var vals = data[wh];
+        var ctx  = canvas.getContext('2d');
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: weeks,
+            datasets: [{
+              data: vals,
+              borderColor: '#6366f1',
+              borderWidth: 1.5,
+              pointRadius: 0,
+              tension: 0.3,
+              fill: false,
+            }]
+          },
+          options: {
+            animation: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: true } },
+            scales: { x: { display: false }, y: { display: false } },
+          }
+        });
+      });
+    })();
+  </script>
+</section>
+
+<section class="metric-card" id="metric-26434">
+  <div class="card-header">
+    <div>
+      <h2>B2C Pick</h2>
+      <span class="card-sub">Last 8 weeks · UPH</span>
+    </div>
+    <a class="mb-link" href="https://metabase.internal.bigblue.co/question/26434" target="_blank">Open in Metabase ↗</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th class="wk-label">Week</th><th>EU-DEU-001<canvas class="spark" data-wh="EU-DEU-001" data-metric="26434"></canvas></th><th>EU-ESP-001<canvas class="spark" data-wh="EU-ESP-001" data-metric="26434"></canvas></th><th>EU-FRA-003<canvas class="spark" data-wh="EU-FRA-003" data-metric="26434"></canvas></th><th>EU-FRA-004<canvas class="spark" data-wh="EU-FRA-004" data-metric="26434"></canvas></th><th>EU-FRA-007<canvas class="spark" data-wh="EU-FRA-007" data-metric="26434"></canvas></th><th>EU-FRA-008<canvas class="spark" data-wh="EU-FRA-008" data-metric="26434"></canvas></th><th>EU-GBR-002<canvas class="spark" data-wh="EU-GBR-002" data-metric="26434"></canvas></th><th class="avg-col">Network avg</th></tr></thead>
+      <tbody><tr><td class='wk-label'>14 Jun <span class="badge">latest</span></td><td class="bot">157.2<span class="arr dn" title="-35.2%">↓</span></td><td class="bot">131.9<span class="arr dn" title="-4.3%">↓</span></td><td>—</td><td class="bot">178.7<span class="arr up" title="+35.5%">↑</span></td><td>181.6<span class="arr dn" title="-14.5%">↓</span></td><td class="top">187.0<span class="arr up" title="+30.6%">↑</span></td><td>—</td><td class="avg-col">167.3</td></tr><tr><td class='wk-label'>07 Jun</td><td class="top">242.6</td><td class="bot">137.8<span class="arr flat">→</span></td><td>240.5<span class="arr dn" title="-7.3%">↓</span></td><td class="bot">131.9<span class="arr dn" title="-19.8%">↓</span></td><td>212.3<span class="arr up" title="+44.2%">↑</span></td><td>143.2<span class="arr dn" title="-10.7%">↓</span></td><td class="bot">59.0<span class="arr dn" title="-30.7%">↓</span></td><td class="avg-col">166.7</td></tr><tr><td class='wk-label'>31 May</td><td>—</td><td class="bot">139.4<span class="arr flat">→</span></td><td class="top">259.4<span class="arr up" title="+3.6%">↑</span></td><td>164.5<span class="arr dn" title="-7.4%">↓</span></td><td class="bot">147.2<span class="arr flat">→</span></td><td>160.3<span class="arr flat">→</span></td><td class="bot">85.2<span class="arr dn" title="-42.0%">↓</span></td><td class="avg-col">159.4</td></tr><tr><td class='wk-label'>24 May</td><td>181.3<span class="arr dn" title="-22.1%">↓</span></td><td class="bot">141.6<span class="arr up" title="+16.7%">↑</span></td><td class="top">250.5<span class="arr up" title="+7.3%">↑</span></td><td>177.7<span class="arr dn" title="-4.0%">↓</span></td><td class="bot">147.1<span class="arr dn" title="-14.0%">↓</span></td><td>160.4<span class="arr flat">→</span></td><td class="bot">146.8<span class="arr up" title="+83.4%">↑</span></td><td class="avg-col">172.2</td></tr><tr><td class='wk-label'>17 May</td><td>232.8<span class="arr flat">→</span></td><td class="bot">121.3<span class="arr dn" title="-15.8%">↓</span></td><td class="top">233.3<span class="arr dn" title="-7.7%">↓</span></td><td>185.0<span class="arr up" title="+16.5%">↑</span></td><td>171.1<span class="arr dn" title="-31.5%">↓</span></td><td class="bot">161.3<span class="arr dn" title="-20.2%">↓</span></td><td class="bot">80.1<span class="arr dn" title="-14.5%">↓</span></td><td class="avg-col">169.3</td></tr><tr><td class='wk-label'>10 May</td><td>234.6<span class="arr dn" title="-10.1%">↓</span></td><td class="bot">144.0<span class="arr up" title="+5.6%">↑</span></td><td class="top">252.9<span class="arr flat">→</span></td><td class="bot">158.8<span class="arr dn" title="-17.7%">↓</span></td><td>249.6<span class="arr up" title="+23.2%">↑</span></td><td>202.1<span class="arr dn" title="-31.6%">↓</span></td><td class="bot">93.7<span class="arr dn" title="-18.2%">↓</span></td><td class="avg-col">190.8</td></tr><tr><td class='wk-label'>03 May</td><td>261.1<span class="arr dn" title="-12.3%">↓</span></td><td class="bot">136.3<span class="arr dn" title="-2.2%">↓</span></td><td>250.2<span class="arr flat">→</span></td><td class="bot">193.0<span class="arr up" title="+16.8%">↑</span></td><td>202.6<span class="arr up" title="+11.7%">↑</span></td><td class="top">295.3<span class="arr up" title="+7.9%">↑</span></td><td class="bot">114.6<span class="arr dn" title="-29.9%">↓</span></td><td class="avg-col">207.6</td></tr><tr><td class='wk-label'>26 Apr</td><td class="top">297.8</td><td class="bot">139.4</td><td>247.9</td><td class="bot">165.2</td><td>181.5</td><td>273.8</td><td class="bot">163.5</td><td class="avg-col">209.9</td></tr></tbody>
+    </table>
+  </div>
+  <script>
+    (function(){
+      var data  = {"EU-DEU-001": [297.75, 261.09, 234.64, 232.75, 181.35, null, 242.6, 157.24], "EU-ESP-001": [139.42, 136.34, 144.04, 121.34, 141.59, 139.41, 137.81, 131.89], "EU-FRA-003": [247.88, 250.19, 252.91, 233.31, 250.46, 259.44, 240.46, null], "EU-FRA-004": [165.19, 193.01, 158.83, 185.03, 177.71, 164.52, 131.87, 178.71], "EU-FRA-007": [181.46, 202.61, 249.59, 171.08, 147.08, 147.2, 212.29, 181.61], "EU-FRA-008": [273.83, 295.35, 202.11, 161.34, 160.36, 160.34, 143.18, 187.03], "EU-GBR-002": [163.55, 114.59, 93.68, 80.08, 146.83, 85.21, 59.01, null]};
+      var weeks = ["26 Apr", "03 May", "10 May", "17 May", "24 May", "31 May", "07 Jun", "14 Jun"];
+      document.querySelectorAll('[data-metric="26434"]').forEach(function(canvas) {
+        var wh   = canvas.getAttribute('data-wh');
+        var vals = data[wh];
+        var ctx  = canvas.getContext('2d');
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: weeks,
+            datasets: [{
+              data: vals,
+              borderColor: '#6366f1',
+              borderWidth: 1.5,
+              pointRadius: 0,
+              tension: 0.3,
+              fill: false,
+            }]
+          },
+          options: {
+            animation: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: true } },
+            scales: { x: { display: false }, y: { display: false } },
+          }
+        });
+      });
+    })();
+  </script>
+</section>
+
+<section class="metric-card" id="metric-26470">
+  <div class="card-header">
+    <div>
+      <h2>Ship</h2>
+      <span class="card-sub">Last 8 weeks · UPH</span>
+    </div>
+    <a class="mb-link" href="https://metabase.internal.bigblue.co/question/26470" target="_blank">Open in Metabase ↗</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th class="wk-label">Week</th><th>EU-DEU-001<canvas class="spark" data-wh="EU-DEU-001" data-metric="26470"></canvas></th><th>EU-ESP-001<canvas class="spark" data-wh="EU-ESP-001" data-metric="26470"></canvas></th><th>EU-FRA-003<canvas class="spark" data-wh="EU-FRA-003" data-metric="26470"></canvas></th><th>EU-FRA-004<canvas class="spark" data-wh="EU-FRA-004" data-metric="26470"></canvas></th><th>EU-FRA-007<canvas class="spark" data-wh="EU-FRA-007" data-metric="26470"></canvas></th><th>EU-FRA-008<canvas class="spark" data-wh="EU-FRA-008" data-metric="26470"></canvas></th><th>EU-GBR-002<canvas class="spark" data-wh="EU-GBR-002" data-metric="26470"></canvas></th><th class="avg-col">Network avg</th></tr></thead>
+      <tbody><tr><td class='wk-label'>14 Jun <span class="badge">latest</span></td><td class="bot">48.4<span class="arr dn" title="-46.5%">↓</span></td><td>199.1<span class="arr dn" title="-17.1%">↓</span></td><td>—</td><td class="bot">129.2<span class="arr up" title="+14.4%">↑</span></td><td class="top">202.9<span class="arr up" title="+37.2%">↑</span></td><td class="bot">150.1<span class="arr flat">→</span></td><td>—</td><td class="avg-col">146.0</td></tr><tr><td class='wk-label'>07 Jun</td><td class="bot">90.4<span class="arr dn" title="-21.8%">↓</span></td><td class="top">240.1<span class="arr up" title="+15.4%">↑</span></td><td>235.0<span class="arr dn" title="-11.6%">↓</span></td><td class="bot">113.0<span class="arr dn" title="-6.1%">↓</span></td><td>147.9<span class="arr dn" title="-14.9%">↓</span></td><td>148.6<span class="arr dn" title="-5.8%">↓</span></td><td class="bot">121.9<span class="arr dn" title="-36.6%">↓</span></td><td class="avg-col">156.7</td></tr><tr><td class='wk-label'>31 May</td><td class="bot">115.7<span class="arr up" title="+99.3%">↑</span></td><td>208.0<span class="arr up" title="+6.5%">↑</span></td><td class="top">265.9<span class="arr up" title="+65.2%">↑</span></td><td class="bot">120.4<span class="arr up" title="+10.4%">↑</span></td><td>173.8<span class="arr up" title="+6.6%">↑</span></td><td class="bot">157.9<span class="arr up" title="+38.1%">↑</span></td><td>192.3<span class="arr dn" title="-23.8%">↓</span></td><td class="avg-col">176.3</td></tr><tr><td class='wk-label'>24 May</td><td class="bot">58.0<span class="arr dn" title="-30.1%">↓</span></td><td>195.4<span class="arr dn" title="-14.6%">↓</span></td><td>160.9<span class="arr dn" title="-33.7%">↓</span></td><td class="bot">109.0<span class="arr dn" title="-14.2%">↓</span></td><td>163.0<span class="arr dn" title="-9.3%">↓</span></td><td class="bot">114.3<span class="arr dn" title="-23.2%">↓</span></td><td class="top">252.3<span class="arr dn" title="-57.6%">↓</span></td><td class="avg-col">150.4</td></tr><tr><td class='wk-label'>17 May</td><td class="bot">83.0<span class="arr up" title="+28.1%">↑</span></td><td>228.7<span class="arr dn" title="-2.5%">↓</span></td><td>242.9<span class="arr dn" title="-11.9%">↓</span></td><td class="bot">127.1<span class="arr dn" title="-8.0%">↓</span></td><td>179.7<span class="arr dn" title="-23.8%">↓</span></td><td class="bot">148.9<span class="arr dn" title="-38.0%">↓</span></td><td class="top">594.5<span class="arr up" title="+36.1%">↑</span></td><td class="avg-col">229.3</td></tr><tr><td class='wk-label'>10 May</td><td class="bot">64.8<span class="arr dn" title="-26.5%">↓</span></td><td class="bot">234.5<span class="arr dn" title="-10.9%">↓</span></td><td>275.6<span class="arr dn" title="-15.0%">↓</span></td><td class="bot">138.2<span class="arr dn" title="-5.8%">↓</span></td><td>235.8<span class="arr up" title="+24.4%">↑</span></td><td>240.2<span class="arr up" title="+19.0%">↑</span></td><td class="top">436.9<span class="arr up" title="+81.6%">↑</span></td><td class="avg-col">232.3</td></tr><tr><td class='wk-label'>03 May</td><td class="bot">88.2<span class="arr dn" title="-10.8%">↓</span></td><td>263.3<span class="arr up" title="+56.0%">↑</span></td><td class="top">324.4<span class="arr up" title="+34.3%">↑</span></td><td class="bot">146.8<span class="arr dn" title="-10.6%">↓</span></td><td class="bot">189.6<span class="arr up" title="+16.2%">↑</span></td><td>201.9<span class="arr dn" title="-18.0%">↓</span></td><td>240.6<span class="arr dn" title="-25.3%">↓</span></td><td class="avg-col">207.8</td></tr><tr><td class='wk-label'>26 Apr</td><td class="bot">98.9</td><td>168.8</td><td>241.5</td><td class="bot">164.2</td><td class="bot">163.2</td><td>246.1</td><td class="top">322.1</td><td class="avg-col">200.7</td></tr></tbody>
+    </table>
+  </div>
+  <script>
+    (function(){
+      var data  = {"EU-DEU-001": [98.92, 88.19, 64.83, 83.04, 58.04, 115.65, 90.43, 48.42], "EU-ESP-001": [168.76, 263.3, 234.54, 228.68, 195.4, 208.05, 240.11, 199.13], "EU-FRA-003": [241.51, 324.42, 275.63, 242.85, 160.94, 265.86, 234.98, null], "EU-FRA-004": [164.24, 146.76, 138.21, 127.1, 109.04, 120.39, 113.0, 129.22], "EU-FRA-007": [163.15, 189.55, 235.76, 179.75, 163.02, 173.82, 147.86, 202.91], "EU-FRA-008": [246.08, 201.85, 240.22, 148.87, 114.31, 157.85, 148.64, 150.1], "EU-GBR-002": [322.07, 240.57, 436.88, 594.53, 252.26, 192.33, 121.87, null]};
+      var weeks = ["26 Apr", "03 May", "10 May", "17 May", "24 May", "31 May", "07 Jun", "14 Jun"];
+      document.querySelectorAll('[data-metric="26470"]').forEach(function(canvas) {
+        var wh   = canvas.getAttribute('data-wh');
+        var vals = data[wh];
+        var ctx  = canvas.getContext('2d');
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: weeks,
+            datasets: [{
+              data: vals,
+              borderColor: '#6366f1',
+              borderWidth: 1.5,
+              pointRadius: 0,
+              tension: 0.3,
+              fill: false,
+            }]
+          },
+          options: {
+            animation: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: true } },
+            scales: { x: { display: false }, y: { display: false } },
+          }
+        });
+      });
+    })();
+  </script>
+</section>
+
+<section class="metric-card" id="metric-26471">
+  <div class="card-header">
+    <div>
+      <h2>Inbound (Receive)</h2>
+      <span class="card-sub">Last 8 weeks · UPH</span>
+    </div>
+    <a class="mb-link" href="https://metabase.internal.bigblue.co/question/26471" target="_blank">Open in Metabase ↗</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th class="wk-label">Week</th><th>EU-DEU-001<canvas class="spark" data-wh="EU-DEU-001" data-metric="26471"></canvas></th><th>EU-ESP-001<canvas class="spark" data-wh="EU-ESP-001" data-metric="26471"></canvas></th><th>EU-FRA-003<canvas class="spark" data-wh="EU-FRA-003" data-metric="26471"></canvas></th><th>EU-FRA-004<canvas class="spark" data-wh="EU-FRA-004" data-metric="26471"></canvas></th><th>EU-FRA-007<canvas class="spark" data-wh="EU-FRA-007" data-metric="26471"></canvas></th><th>EU-FRA-008<canvas class="spark" data-wh="EU-FRA-008" data-metric="26471"></canvas></th><th>EU-GBR-002<canvas class="spark" data-wh="EU-GBR-002" data-metric="26471"></canvas></th><th class="avg-col">Network avg</th></tr></thead>
+      <tbody><tr><td class='wk-label'>24 May <span class="badge">latest</span></td><td class="bot">4.0<span class="arr dn" title="-87.0%">↓</span></td><td>13.9<span class="arr flat">→</span></td><td class="bot">10.9<span class="arr dn" title="-11.3%">↓</span></td><td class="top">40.1<span class="arr up" title="+49.3%">↑</span></td><td>31.8<span class="arr up" title="+66.3%">↑</span></td><td class="bot">7.1<span class="arr dn" title="-61.3%">↓</span></td><td>12.0<span class="arr flat">→</span></td><td class="avg-col">17.1</td></tr><tr><td class='wk-label'>17 May</td><td class="top">30.8</td><td class="bot">14.1<span class="arr dn" title="-7.4%">↓</span></td><td class="bot">12.2<span class="arr up" title="+17.3%">↑</span></td><td>26.9<span class="arr flat">→</span></td><td>19.1<span class="arr flat">→</span></td><td>18.2<span class="arr flat">→</span></td><td class="bot">11.9<span class="arr dn" title="-11.4%">↓</span></td><td class="avg-col">19.0</td></tr><tr><td class='wk-label'>10 May</td><td>—</td><td class="bot">15.2<span class="arr up" title="+10.2%">↑</span></td><td class="bot">10.4<span class="arr dn" title="-14.5%">↓</span></td><td class="top">26.9<span class="arr up" title="+14.5%">↑</span></td><td>18.9<span class="arr up" title="+12.5%">↑</span></td><td>18.2<span class="arr up" title="+10.2%">↑</span></td><td class="bot">13.4<span class="arr dn" title="-36.3%">↓</span></td><td class="avg-col">17.2</td></tr><tr><td class='wk-label'>03 May</td><td class="top">31.0<span class="arr up" title="+257.7%">↑</span></td><td class="bot">13.8<span class="arr dn" title="-13.7%">↓</span></td><td class="bot">12.2<span class="arr up" title="+38.4%">↑</span></td><td>23.5<span class="arr up" title="+15.7%">↑</span></td><td>16.8<span class="arr dn" title="-5.0%">↓</span></td><td class="bot">16.6<span class="arr dn" title="-18.4%">↓</span></td><td>21.0<span class="arr up" title="+37.6%">↑</span></td><td class="avg-col">19.3</td></tr><tr><td class='wk-label'>26 Apr</td><td class="bot">8.7<span class="arr up" title="+71.4%">↑</span></td><td>16.0<span class="arr flat">→</span></td><td class="bot">8.8<span class="arr dn" title="-45.8%">↓</span></td><td>20.3<span class="arr dn" title="-2.4%">↓</span></td><td>17.7<span class="arr dn" title="-16.5%">↓</span></td><td class="top">20.3<span class="arr up" title="+13.1%">↑</span></td><td class="bot">15.3<span class="arr dn" title="-6.8%">↓</span></td><td class="avg-col">15.3</td></tr><tr><td class='wk-label'>19 Apr</td><td class="bot">5.1<span class="arr dn" title="-86.3%">↓</span></td><td class="bot">15.8<span class="arr dn" title="-20.1%">↓</span></td><td class="bot">16.3<span class="arr up" title="+55.0%">↑</span></td><td>20.8<span class="arr dn" title="-2.7%">↓</span></td><td class="top">21.2<span class="arr up" title="+34.8%">↑</span></td><td>17.9<span class="arr dn" title="-47.5%">↓</span></td><td>16.4<span class="arr up" title="+98.4%">↑</span></td><td class="avg-col">16.2</td></tr><tr><td class='wk-label'>12 Apr</td><td class="top">36.9<span class="arr up" title="+1227.4%">↑</span></td><td>19.8<span class="arr up" title="+132.2%">↑</span></td><td class="bot">10.5<span class="arr dn" title="-28.5%">↓</span></td><td>21.3<span class="arr flat">→</span></td><td class="bot">15.7<span class="arr dn" title="-20.6%">↓</span></td><td>34.1<span class="arr up" title="+416.1%">↑</span></td><td class="bot">8.3<span class="arr dn" title="-37.5%">↓</span></td><td class="avg-col">21.0</td></tr><tr><td class='wk-label'>05 Apr</td><td class="bot">2.8</td><td class="bot">8.5</td><td>14.7</td><td class="top">21.3</td><td>19.8</td><td class="bot">6.6</td><td>13.2</td><td class="avg-col">12.4</td></tr></tbody>
+    </table>
+  </div>
+  <script>
+    (function(){
+      var data  = {"EU-DEU-001": [2.78, 36.94, 5.06, 8.67, 31.0, null, 30.77, 4.0], "EU-ESP-001": [8.54, 19.82, 15.84, 15.99, 13.8, 15.2, 14.08, 13.93], "EU-FRA-003": [14.69, 10.5, 16.27, 8.82, 12.21, 10.43, 12.24, 10.86], "EU-FRA-004": [21.28, 21.34, 20.77, 20.28, 23.47, 26.87, 26.88, 40.14], "EU-FRA-007": [19.8, 15.71, 21.18, 17.7, 16.8, 18.9, 19.15, 31.85], "EU-FRA-008": [6.61, 34.14, 17.93, 20.29, 16.56, 18.24, 18.24, 7.06], "EU-GBR-002": [13.2, 8.25, 16.37, 15.26, 21.01, 13.38, 11.86, 12.03]};
+      var weeks = ["05 Apr", "12 Apr", "19 Apr", "26 Apr", "03 May", "10 May", "17 May", "24 May"];
+      document.querySelectorAll('[data-metric="26471"]').forEach(function(canvas) {
+        var wh   = canvas.getAttribute('data-wh');
+        var vals = data[wh];
+        var ctx  = canvas.getContext('2d');
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: weeks,
+            datasets: [{
+              data: vals,
+              borderColor: '#6366f1',
+              borderWidth: 1.5,
+              pointRadius: 0,
+              tension: 0.3,
+              fill: false,
+            }]
+          },
+          options: {
+            animation: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: true } },
+            scales: { x: { display: false }, y: { display: false } },
+          }
+        });
+      });
+    })();
+  </script>
+</section>
+
+<section class="metric-card" id="metric-26472">
+  <div class="card-header">
+    <div>
+      <h2>Replenishments</h2>
+      <span class="card-sub">Last 8 weeks · UPH</span>
+    </div>
+    <a class="mb-link" href="https://metabase.internal.bigblue.co/question/26472" target="_blank">Open in Metabase ↗</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th class="wk-label">Week</th><th>EU-DEU-001<canvas class="spark" data-wh="EU-DEU-001" data-metric="26472"></canvas></th><th>EU-ESP-001<canvas class="spark" data-wh="EU-ESP-001" data-metric="26472"></canvas></th><th>EU-FRA-003<canvas class="spark" data-wh="EU-FRA-003" data-metric="26472"></canvas></th><th>EU-FRA-007<canvas class="spark" data-wh="EU-FRA-007" data-metric="26472"></canvas></th><th>EU-FRA-008<canvas class="spark" data-wh="EU-FRA-008" data-metric="26472"></canvas></th><th>EU-GBR-002<canvas class="spark" data-wh="EU-GBR-002" data-metric="26472"></canvas></th><th class="avg-col">Network avg</th></tr></thead>
+      <tbody><tr><td class='wk-label'>24 May <span class="badge">latest</span></td><td>—</td><td class="bot">3.9<span class="arr dn" title="-12.2%">↓</span></td><td class="top">6.0<span class="arr dn" title="-8.1%">↓</span></td><td class="bot">3.3<span class="arr up" title="+32.4%">↑</span></td><td>4.0<span class="arr dn" title="-8.9%">↓</span></td><td class="bot">3.0<span class="arr up" title="+31.2%">↑</span></td><td class="avg-col">4.0</td></tr><tr><td class='wk-label'>17 May</td><td class="bot">2.2</td><td>4.4<span class="arr up" title="+3.8%">↑</span></td><td class="top">6.5<span class="arr dn" title="-19.6%">↓</span></td><td class="bot">2.5<span class="arr up" title="+142.5%">↑</span></td><td>4.3<span class="arr up" title="+25.4%">↑</span></td><td class="bot">2.3<span class="arr up" title="+15.3%">↑</span></td><td class="avg-col">3.7</td></tr><tr><td class='wk-label'>10 May</td><td>—</td><td>4.3<span class="arr up" title="+3.3%">↑</span></td><td class="top">8.1<span class="arr up" title="+11.4%">↑</span></td><td class="bot">1.0<span class="arr dn" title="-38.5%">↓</span></td><td class="bot">3.5<span class="arr up" title="+11.7%">↑</span></td><td class="bot">2.0<span class="arr dn" title="-24.9%">↓</span></td><td class="avg-col">3.8</td></tr><tr><td class='wk-label'>03 May</td><td>—</td><td>4.1<span class="arr up" title="+8.3%">↑</span></td><td class="top">7.3<span class="arr dn" title="-47.1%">↓</span></td><td class="bot">1.7<span class="arr up" title="+14.7%">↑</span></td><td class="bot">3.1<span class="arr dn" title="-44.4%">↓</span></td><td class="bot">2.7<span class="arr up" title="+12.3%">↑</span></td><td class="avg-col">3.8</td></tr><tr><td class='wk-label'>26 Apr</td><td>—</td><td class="bot">3.8<span class="arr dn" title="-31.9%">↓</span></td><td class="top">13.8<span class="arr up" title="+98.9%">↑</span></td><td class="bot">1.5<span class="arr flat">→</span></td><td>5.6<span class="arr up" title="+10.0%">↑</span></td><td class="bot">2.4<span class="arr dn" title="-31.8%">↓</span></td><td class="avg-col">5.4</td></tr><tr><td class='wk-label'>19 Apr</td><td>—</td><td>5.6<span class="arr up" title="+25.4%">↑</span></td><td class="top">6.9<span class="arr up" title="+89.3%">↑</span></td><td class="bot">1.4<span class="arr dn" title="-17.5%">↓</span></td><td class="bot">5.1<span class="arr dn" title="-6.5%">↓</span></td><td class="bot">3.5<span class="arr up" title="+42.1%">↑</span></td><td class="avg-col">4.5</td></tr><tr><td class='wk-label'>12 Apr</td><td>—</td><td>4.5<span class="arr dn" title="-7.8%">↓</span></td><td class="bot">3.7<span class="arr dn" title="-33.3%">↓</span></td><td class="bot">1.8<span class="arr dn" title="-51.0%">↓</span></td><td class="top">5.4<span class="arr up" title="+5.5%">↑</span></td><td class="bot">2.5<span class="arr dn" title="-15.9%">↓</span></td><td class="avg-col">3.6</td></tr><tr><td class='wk-label'>05 Apr</td><td>—</td><td class="bot">4.8</td><td class="top">5.5</td><td class="bot">3.6</td><td>5.1</td><td class="bot">2.9</td><td class="avg-col">4.4</td></tr></tbody>
+    </table>
+  </div>
+  <script>
+    (function(){
+      var data  = {"EU-DEU-001": [null, null, null, null, null, null, 2.25, null], "EU-ESP-001": [4.83, 4.46, 5.59, 3.81, 4.13, 4.26, 4.43, 3.89], "EU-FRA-003": [5.5, 3.67, 6.94, 13.81, 7.31, 8.14, 6.54, 6.02], "EU-FRA-007": [3.59, 1.76, 1.45, 1.47, 1.68, 1.04, 2.51, 3.32], "EU-FRA-008": [5.14, 5.42, 5.07, 5.58, 3.1, 3.46, 4.34, 3.95], "EU-GBR-002": [2.93, 2.47, 3.5, 2.39, 2.69, 2.02, 2.32, 3.05]};
+      var weeks = ["05 Apr", "12 Apr", "19 Apr", "26 Apr", "03 May", "10 May", "17 May", "24 May"];
+      document.querySelectorAll('[data-metric="26472"]').forEach(function(canvas) {
+        var wh   = canvas.getAttribute('data-wh');
+        var vals = data[wh];
+        var ctx  = canvas.getContext('2d');
+        new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: weeks,
+            datasets: [{
+              data: vals,
+              borderColor: '#6366f1',
+              borderWidth: 1.5,
+              pointRadius: 0,
+              tension: 0.3,
+              fill: false,
+            }]
+          },
+          options: {
+            animation: false,
+            plugins: { legend: { display: false }, tooltip: { enabled: true } },
+            scales: { x: { display: false }, y: { display: false } },
+          }
+        });
+      });
+    })();
+  </script>
+</section>
+</main>
+
+<div class="footer">Generated 2026-06-25 09:10 · Bigblue Operations</div>
+
+</body>
+</html>
