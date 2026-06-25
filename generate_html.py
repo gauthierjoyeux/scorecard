@@ -111,7 +111,7 @@ def build_metric_section(q: dict, pivot: pd.DataFrame) -> str:
     rows_html = ""
     for i, week in enumerate(weeks):
         net_avg = pivot.loc[week, warehouses].mean()
-        colors  = row_rank_colors(pivot, week, warehouses, q["color"])
+        colors  = row_rank_colors(pivot, week, warehouses, q["color"] and i == 0)
         cells   = ""
         for wh in warehouses:
             val  = pivot.loc[week, wh]
