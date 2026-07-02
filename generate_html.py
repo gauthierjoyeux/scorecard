@@ -43,7 +43,7 @@ def prepare_pivot(record: dict, q: dict, n_weeks: int) -> pd.DataFrame:
     if "pivot-grouping" in df.columns:
         df = df[df["pivot-grouping"] == 0].copy()
 
-    df[date_col] = pd.to_datetime(df[date_col], utc=True).dt.tz_localize(None).dt.normalize()
+    df[date_col] = pd.to_datetime(df[date_col].str[:10])  # take date part only, no UTC shift
     df["avg"]    = pd.to_numeric(df["avg"], errors="coerce")
 
     latest = sorted(df[date_col].unique())[-n_weeks:]

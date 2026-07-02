@@ -92,7 +92,7 @@ def prepare_pivot(df: pd.DataFrame, q: dict, n_weeks: int) -> pd.DataFrame:
     if "pivot-grouping" in df.columns:
         df = df[df["pivot-grouping"] == 0].copy()
 
-    df[date_col] = pd.to_datetime(df[date_col], utc=True).dt.tz_localize(None).dt.normalize()
+    df[date_col] = pd.to_datetime(df[date_col].str[:10])
     df["avg"]    = pd.to_numeric(df["avg"], errors="coerce")
 
     # Keep last n_weeks
