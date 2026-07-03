@@ -24,7 +24,7 @@ def _latest_data_file() -> str:
 
 DATA_FILE = os.environ.get("DATA_FILE", _latest_data_file())
 OUTPUT    = os.environ.get("OUTPUT", "index.html")
-N_WEEKS   = int(os.environ.get("WEEKS", "8"))
+N_WEEKS   = int(os.environ.get("WEEKS", "13"))
 
 METABASE_URL = "https://metabase.internal.bigblue.co"
 
@@ -52,14 +52,19 @@ def prepare_pivot(record: dict, q: dict, n_weeks: int) -> pd.DataFrame:
     if "pivot-grouping" in df.columns:
         df = df[df["pivot-grouping"] == 0].copy()
 
-    df[date_col] = pd.to_datetime(df[date_col].str[:10])  # take date part only, no UTC shift
-    df["avg"]    = pd.to_numeric(df["avg"], errors="coerce")
+    # Normalise to plain YYYY-MM-DD strings — avoids all timezone/DST shift issues
+    df["_week"] = df[date_col].apply(lambda v: str(v)[:10] if v else None)
+    df = df[df["_week"].notna()].copy()
+    df["avg"] = pd.to_numeric(df["avg"], errors="coerce")
 
-    latest = sorted(df[date_col].unique())[-n_weeks:]
-    df = df[df[date_col].isin(latest)]
+    # Sort chronologically and keep the last n_weeks
+    all_weeks = sorted(df["_week"].unique())   # ISO strings sort correctly
+    latest    = all_weeks[-n_weeks:]
+    df = df[df["_week"].isin(latest)]
 
-    pivot = df.pivot_table(index=date_col, columns=wh_col, values="avg", aggfunc="mean")
-    pivot.sort_index(ascending=False, inplace=True)   # newest first
+    pivot = df.pivot_table(index="_week", columns=wh_col, values="avg", aggfunc="mean")
+    # Sort descending so the most recent week is always first
+    pivot.sort_index(ascending=False, inplace=True)
     return pivot
 
 
@@ -108,7 +113,7 @@ def build_metric_section(q: dict, pivot: pd.DataFrame) -> str:
         spark_data[wh] = vals
 
     spark_json = json.dumps(spark_data)
-    week_labels_json = json.dumps([pd.Timestamp(w).strftime("%d %b") for w in reversed(weeks)])
+    week_labels_json = json.dumps([pd.Timestamp(w).strftime("%d %b") for w in sorted(weeks)])  # oldest→newest for chart
 
     # Table HTML
     header_cells = "".join(
