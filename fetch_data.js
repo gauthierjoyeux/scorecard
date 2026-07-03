@@ -15,11 +15,11 @@
   console.log("⏳ Fetching scorecard data from Metabase...");
 
   Promise.all(questions.map(q =>
-    fetch("/api/card/" + q.id + "/query", {
+    fetch("/api/card/pivot/" + q.id + "/query", {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: "{}",
+      body: JSON.stringify({ignore_cache: true}),
     })
       .then(r => r.json())
       .then(d => ({

@@ -13,7 +13,16 @@ from datetime import datetime
 
 warnings.filterwarnings("ignore")
 
-DATA_FILE = os.environ.get("DATA_FILE", os.path.expanduser("~/Downloads/scorecard_data.json"))
+def _latest_data_file() -> str:
+    """Return the most recently modified scorecard_data*.json in ~/Downloads."""
+    import glob
+    pattern = os.path.expanduser("~/Downloads/scorecard_data*.json")
+    files = glob.glob(pattern)
+    if not files:
+        return os.path.expanduser("~/Downloads/scorecard_data.json")
+    return max(files, key=os.path.getmtime)
+
+DATA_FILE = os.environ.get("DATA_FILE", _latest_data_file())
 OUTPUT    = os.environ.get("OUTPUT", "index.html")
 N_WEEKS   = int(os.environ.get("WEEKS", "8"))
 
