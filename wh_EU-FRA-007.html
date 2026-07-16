@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EU-FRA-007 · Warehouse Scorecard · Week 28 · 16 July 2026</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --avg-bg:  #eff6ff; --avg-txt:  #1e40af;
+    --wh-bg:   #f5f3ff; --wh-txt:   #4c1d95;
+    --hdr:     #1e1b4b;
+    --card:    #ffffff;
+    --bg:      #f1f5f9;
+    --border:  #e2e8f0;
+    --muted:   #64748b;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: var(--bg); color: #1e293b; }
+
+  .topbar { background: var(--hdr); color: white; padding: 18px 32px;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px #0004; }
+  .topbar .h1 { font-size: 1.1rem; font-weight: 700; letter-spacing: .04em; }
+  .topbar .week { font-size: .8rem; color: #a5b4fc; margin-top: 2px; }
+  .topbar .legend { display: flex; gap: 12px; font-size: .75rem; }
+  .topbar .leg { display: flex; align-items: center; gap: 5px; }
+  .swatch { width: 12px; height: 12px; border-radius: 3px; }
+
+  .nav { background: white; border-bottom: 1px solid var(--border);
+         padding: 0 32px; display: flex; gap: 4px; overflow-x: auto;
+         position: sticky; top: 57px; z-index: 99; }
+  .nav a { padding: 10px 14px; font-size: .82rem; font-weight: 500; color: var(--muted);
+           text-decoration: none; border-bottom: 2px solid transparent; white-space: nowrap; }
+  .nav a:hover { color: var(--hdr); border-color: var(--hdr); }
+
+  .main { max-width: 700px; margin: 0 auto; padding: 28px 24px 60px; }
+  .metric-card { background: var(--card); border: 1px solid var(--border);
+                 border-radius: 12px; margin-bottom: 28px;
+                 box-shadow: 0 1px 3px #0001; overflow: hidden; }
+  .card-header { padding: 18px 24px 14px; display: flex;
+                 align-items: flex-start; justify-content: space-between;
+                 border-bottom: 1px solid var(--border); }
+  .card-header h2 { font-size: 1.05rem; font-weight: 700; }
+  .card-sub { font-size: .75rem; color: var(--muted); margin-top: 3px; display: block; }
+  .mb-link { font-size: .78rem; color: #6366f1; text-decoration: none; font-weight: 500;
+             white-space: nowrap; padding: 6px 12px; border: 1px solid #c7d2fe;
+             border-radius: 6px; background: #eef2ff; }
+  .mb-link:hover { background: #e0e7ff; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  th { padding: 10px 14px; text-align: center; background: #f8fafc;
+       font-weight: 600; color: var(--muted); font-size: .75rem;
+       border-bottom: 2px solid var(--border); white-space: nowrap; }
+  th.wk-label, td.wk-label { text-align: left; }
+  td { padding: 9px 14px; text-align: center; border-bottom: 1px solid var(--border);
+       transition: background .15s; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fafc !important; }
+
+  td.wh-col  { background: var(--wh-bg);  color: var(--wh-txt);  font-weight: 600; }
+  th.wh-col  { background: var(--wh-bg);  color: var(--wh-txt); }
+  td.avg-col { background: var(--avg-bg); color: var(--avg-txt); font-weight: 600; }
+  th.avg-col { background: var(--avg-bg); color: var(--avg-txt); }
+
+  .badge { background: #6366f1; color: white; font-size: .65rem; font-weight: 700;
+           padding: 1px 6px; border-radius: 20px; margin-left: 6px;
+           vertical-align: middle; letter-spacing: .04em; }
+  .arr { font-size: .7rem; margin-left: 3px; }
+  .arr.up   { color: #16a34a; }
+  .arr.dn   { color: #dc2626; }
+  .arr.flat { color: var(--muted); }
+
+  .spark { display: block; width: 80px; height: 24px; margin: 4px auto 0; }
+
+  .footer { text-align: center; font-size: .72rem; color: var(--muted); padding: 20px; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div>
+    <div class="h1">BIGBLUE · EU-FRA-007</div>
+    <div class="week">Week 28 · 16 July 2026</div>
+  </div>
+  <div class="legend">
+    <div class="leg"><div class="swatch" style="background:#ddd8fe"></div> This warehouse</div>
+    <div class="leg"><div class="swatch" style="background:#bfdbfe"></div> Network avg</div>
+  </div>
+</header>
+
+<nav class="nav">
+  <a href="#metric-26473">B2C Pack</a>
+<a href="#metric-26435">B2C NAC</a>
+<a href="#metric-26434">B2C Pick</a>
+<a href="#metric-26470">Ship</a>
+<a href="#metric-26471">Inbound (Receive)</a>
+<a href="#metric-26472">Replenishments</a>
+</nav>
+
+<main class="main">
+  
+<section class="metric-card" id="metric-26473">
+  <div class="card-header">
+    <div>
+      <h2>B2C Pack</h2>
+      <span class="card-sub">Last 12 weeks · UPH</span>
+    </div>
+    <a class="mb-link" href="https://metabase.internal.bigblue.co/question/26473" target="_blank">Open in Metabase ↗</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="wk-label">Week</th>
+          <th class="wh-col">EU-FRA-007<canvas id="spark-26473" class="spark"></canvas></th>
+          <th class="avg-col">Network avg</th>
+        </tr>
+      </thead>
+      <tbody><tr><td class='wk-label'>06 Jul <span class="badge">latest</span></td><td class='wh-col'>101.0<span class="arr up" title="+12.8%">↑</span></td><td class='avg-col'>143.2</td></tr><tr><td class='wk-label'>29 Jun</td><td class='wh-col'>89.5<span class="arr up" title="+21.8%">↑</span></td><td class='avg-col'>121.2</td></tr><tr><td class='wk-label'>22 Jun</td><td class='wh-col'>73.5<span class="arr dn" title="-25.5%">↓</span></td><td class='avg-col'>104.9</td></tr><tr><td class='wk-label'>15 Jun</td><td class='wh-col'>98.7<span class="arr dn" title="-17.5%">↓</span></td><td class='avg-col'>105.1</td></tr><tr><td class='wk-label'>08 Jun</td><td class='wh-col'>119.6<span class="arr up" title="+17.7%">↑</span></td><td class='avg-col'>121.9</td></tr><tr><td class='wk-label'>01 Jun</td><td class='wh-col'>101.6<span class="arr up" title="+20.4%">↑</span></td><td class='avg-col'>136.5</td></tr><tr><td class='wk-label'>25 May</td><td class='wh-col'>84.4<span class="arr dn" title="-14.1%">↓</span></td><td class='avg-col'>114.5</td></tr><tr><td class='wk-label'>18 May</td><td class='wh-col'>98.2<span class="arr dn" title="-10.5%">↓</span></td><td class='avg-col'>135.1</td></tr><tr><td class='wk-label'>11 May</td><td class='wh-col'>109.7<span class="arr dn" title="-4.8%">↓</span></td><td class='avg-col'>128.2</td></tr><tr><td class='wk-label'>04 May</td><td class='wh-col'>115.2<span class="arr up" title="+17.7%">↑</span></td><td class='avg-col'>127.0</td></tr><tr><td class='wk-label'>27 Apr</td><td class='wh-col'>97.9<span class="arr up" title="+6.6%">↑</span></td><td class='avg-col'>115.0</td></tr><tr><td class='wk-label'>20 Apr</td><td class='wh-col'>91.8</td><td class='avg-col'>143.2</td></tr></tbody>
+    </table>
+  </div>
+  <script>
+    (function(){
+      var vals  = [91.8, 97.9, 115.2, 109.7, 98.2, 84.4, 101.6, 119.6, 98.7, 73.5, 89.5, 101.0];
+      var weeks = ["20 Apr", "27 Apr", "04 May", "11 May", "18 May", "25 May", "01 Jun", "08 Jun", "15 Jun", "22 Jun", "29 Jun", "06 Jul"];
+      var ctx   = document.getElementById('spark-26473').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: weeks,
+          datasets: [{
+            data: vals,
+            borderColor: '#6366f1',
+            borderWidth: 1.5,
+            pointRadius: 0,
+            tension: 0.3,
+            fill: false,
+          }]
+        },
+        options: {
+          animation: false,
+          plugins: { legend: { display: false }, tooltip: { enabled: true } },
+          scales: { x: { display: false }, y: { display: false } },
+        }
+      });
+    })();
+  </script>
+</section>
+
+<section class="metric-card" id="metric-26435">
+  <div class="card-header">
+    <div>
+      <h2>B2C NAC</h2>
+      <span class="card-sub">Last 13 weeks · UPH</span>
+    </div>
+    <a class="mb-link" href="https://metabase.internal.bigblue.co/question/26435" target="_blank">Open in Metabase ↗</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="wk-label">Week</th>
+          <th class="wh-col">EU-FRA-007<canvas id="spark-26435" class="spark"></canvas></th>
+          <th class="avg-col">Network avg</th>
+        </tr>
+      </thead>
+      <tbody><tr><td class='wk-label'>06 Jul <span class="badge">latest</span></td><td class='wh-col'>3.0<span class="arr up" title="+8.8%">↑</span></td><td class='avg-col'>3.1</td></tr><tr><td class='wk-label'>29 Jun</td><td class='wh-col'>2.8<span class="arr up" title="+11.9%">↑</span></td><td class='avg-col'>3.0</td></tr><tr><td class='wk-label'>22 Jun</td><td class='wh-col'>2.5<span class="arr dn" title="-5.2%">↓</span></td><td class='avg-col'>2.8</td></tr><tr><td class='wk-label'>15 Jun</td><td class='wh-col'>2.6<span class="arr dn" title="-3.8%">↓</span></td><td class='avg-col'>2.9</td></tr><tr><td class='wk-label'>08 Jun</td><td class='wh-col'>2.7<span class="arr dn" title="-4.5%">↓</span></td><td class='avg-col'>2.9</td></tr><tr><td class='wk-label'>01 Jun</td><td class='wh-col'>2.9<span class="arr up" title="+6.9%">↑</span></td><td class='avg-col'>3.0</td></tr><tr><td class='wk-label'>25 May</td><td class='wh-col'>2.7<span class="arr dn" title="-6.4%">↓</span></td><td class='avg-col'>2.9</td></tr><tr><td class='wk-label'>18 May</td><td class='wh-col'>2.9<span class="arr up" title="+2.4%">↑</span></td><td class='avg-col'>3.0</td></tr><tr><td class='wk-label'>11 May</td><td class='wh-col'>2.8<span class="arr dn" title="-19.1%">↓</span></td><td class='avg-col'>2.8</td></tr><tr><td class='wk-label'>04 May</td><td class='wh-col'>3.4<span class="arr up" title="+13.9%">↑</span></td><td class='avg-col'>2.8</td></tr><tr><td class='wk-label'>27 Apr</td><td class='wh-col'>3.0<span class="arr dn" title="-3.4%">↓</span></td><td class='avg-col'>2.8</td></tr><tr><td class='wk-label'>20 Apr</td><td class='wh-col'>3.1<span class="arr flat">→</span></td><td class='avg-col'>2.9</td></tr><tr><td class='wk-label'>13 Apr</td><td class='wh-col'>3.1</td><td class='avg-col'>2.7</td></tr></tbody>
+    </table>
+  </div>
+  <script>
+    (function(){
+      var vals  = [3.13, 3.13, 3.03, 3.45, 2.79, 2.86, 2.67, 2.86, 2.73, 2.63, 2.49, 2.79, 3.03];
+      var weeks = ["13 Apr", "20 Apr", "27 Apr", "04 May", "11 May", "18 May", "25 May", "01 Jun", "08 Jun", "15 Jun", "22 Jun", "29 Jun", "06 Jul"];
+      var ctx   = document.getElementById('spark-26435').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: weeks,
+          datasets: [{
+            data: vals,
+            borderColor: '#6366f1',
+            borderWidth: 1.5,
+            pointRadius: 0,
+            tension: 0.3,
+            fill: false,
+          }]
+        },
+        options: {
+          animation: false,
+          plugins: { legend: { display: false }, tooltip: { enabled: true } },
+          scales: { x: { display: false }, y: { display: false } },
+        }
+      });
+    })();
+  </script>
+</section>
+
+<section class="metric-card" id="metric-26434">
+  <div class="card-header">
+    <div>
+      <h2>B2C Pick</h2>
+      <span class="card-sub">Last 13 weeks · UPH</span>
+    </div>
+    <a class="mb-link" href="https://metabase.internal.bigblue.co/question/26434" target="_blank">Open in Metabase ↗</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="wk-label">Week</th>
+          <th class="wh-col">EU-FRA-007<canvas id="spark-26434" class="spark"></canvas></th>
+          <th class="avg-col">Network avg</th>
+        </tr>
+      </thead>
+      <tbody><tr><td class='wk-label'>06 Jul <span class="badge">latest</span></td><td class='wh-col'>177.9<span class="arr up" title="+15.6%">↑</span></td><td class='avg-col'>191.6</td></tr><tr><td class='wk-label'>29 Jun</td><td class='wh-col'>154.0<span class="arr up" title="+26.2%">↑</span></td><td class='avg-col'>161.9</td></tr><tr><td class='wk-label'>22 Jun</td><td class='wh-col'>122.1<span class="arr dn" title="-32.8%">↓</span></td><td class='avg-col'>156.2</td></tr><tr><td class='wk-label'>15 Jun</td><td class='wh-col'>181.6<span class="arr dn" title="-14.5%">↓</span></td><td class='avg-col'>164.7</td></tr><tr><td class='wk-label'>08 Jun</td><td class='wh-col'>212.3<span class="arr up" title="+44.2%">↑</span></td><td class='avg-col'>166.7</td></tr><tr><td class='wk-label'>01 Jun</td><td class='wh-col'>147.2<span class="arr flat">→</span></td><td class='avg-col'>159.4</td></tr><tr><td class='wk-label'>25 May</td><td class='wh-col'>147.1<span class="arr dn" title="-14.0%">↓</span></td><td class='avg-col'>171.9</td></tr><tr><td class='wk-label'>18 May</td><td class='wh-col'>171.1<span class="arr dn" title="-31.5%">↓</span></td><td class='avg-col'>169.3</td></tr><tr><td class='wk-label'>11 May</td><td class='wh-col'>249.6<span class="arr up" title="+23.2%">↑</span></td><td class='avg-col'>190.8</td></tr><tr><td class='wk-label'>04 May</td><td class='wh-col'>202.6<span class="arr up" title="+11.7%">↑</span></td><td class='avg-col'>207.6</td></tr><tr><td class='wk-label'>27 Apr</td><td class='wh-col'>181.5<span class="arr flat">→</span></td><td class='avg-col'>209.9</td></tr><tr><td class='wk-label'>20 Apr</td><td class='wh-col'>181.9<span class="arr dn" title="-2.5%">↓</span></td><td class='avg-col'>222.3</td></tr><tr><td class='wk-label'>13 Apr</td><td class='wh-col'>186.5</td><td class='avg-col'>177.0</td></tr></tbody>
+    </table>
+  </div>
+  <script>
+    (function(){
+      var vals  = [186.54, 181.89, 181.46, 202.61, 249.59, 171.08, 147.08, 147.2, 212.3, 181.61, 122.06, 154.0, 177.95];
+      var weeks = ["13 Apr", "20 Apr", "27 Apr", "04 May", "11 May", "18 May", "25 May", "01 Jun", "08 Jun", "15 Jun", "22 Jun", "29 Jun", "06 Jul"];
+      var ctx   = document.getElementById('spark-26434').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: weeks,
+          datasets: [{
+            data: vals,
+            borderColor: '#6366f1',
+            borderWidth: 1.5,
+            pointRadius: 0,
+            tension: 0.3,
+            fill: false,
+          }]
+        },
+        options: {
+          animation: false,
+          plugins: { legend: { display: false }, tooltip: { enabled: true } },
+          scales: { x: { display: false }, y: { display: false } },
+        }
+      });
+    })();
+  </script>
+</section>
+
+<section class="metric-card" id="metric-26470">
+  <div class="card-header">
+    <div>
+      <h2>Ship</h2>
+      <span class="card-sub">Last 13 weeks · UPH</span>
+    </div>
+    <a class="mb-link" href="https://metabase.internal.bigblue.co/question/26470" target="_blank">Open in Metabase ↗</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="wk-label">Week</th>
+          <th class="wh-col">EU-FRA-007<canvas id="spark-26470" class="spark"></canvas></th>
+          <th class="avg-col">Network avg</th>
+        </tr>
+      </thead>
+      <tbody><tr><td class='wk-label'>06 Jul <span class="badge">latest</span></td><td class='wh-col'>202.9<span class="arr up" title="+12.3%">↑</span></td><td class='avg-col'>165.9</td></tr><tr><td class='wk-label'>29 Jun</td><td class='wh-col'>180.7<span class="arr flat">→</span></td><td class='avg-col'>194.8</td></tr><tr><td class='wk-label'>22 Jun</td><td class='wh-col'>183.4<span class="arr dn" title="-9.6%">↓</span></td><td class='avg-col'>168.0</td></tr><tr><td class='wk-label'>15 Jun</td><td class='wh-col'>202.9<span class="arr up" title="+37.2%">↑</span></td><td class='avg-col'>166.4</td></tr><tr><td class='wk-label'>08 Jun</td><td class='wh-col'>147.9<span class="arr dn" title="-14.9%">↓</span></td><td class='avg-col'>156.7</td></tr><tr><td class='wk-label'>01 Jun</td><td class='wh-col'>173.8<span class="arr up" title="+6.6%">↑</span></td><td class='avg-col'>176.3</td></tr><tr><td class='wk-label'>25 May</td><td class='wh-col'>163.0<span class="arr dn" title="-9.3%">↓</span></td><td class='avg-col'>150.4</td></tr><tr><td class='wk-label'>18 May</td><td class='wh-col'>179.7<span class="arr dn" title="-23.8%">↓</span></td><td class='avg-col'>229.3</td></tr><tr><td class='wk-label'>11 May</td><td class='wh-col'>235.8<span class="arr up" title="+24.4%">↑</span></td><td class='avg-col'>232.3</td></tr><tr><td class='wk-label'>04 May</td><td class='wh-col'>189.6<span class="arr up" title="+16.2%">↑</span></td><td class='avg-col'>207.8</td></tr><tr><td class='wk-label'>27 Apr</td><td class='wh-col'>163.2<span class="arr dn" title="-5.4%">↓</span></td><td class='avg-col'>200.7</td></tr><tr><td class='wk-label'>20 Apr</td><td class='wh-col'>172.5<span class="arr up" title="+11.8%">↑</span></td><td class='avg-col'>223.1</td></tr><tr><td class='wk-label'>13 Apr</td><td class='wh-col'>154.3</td><td class='avg-col'>196.0</td></tr></tbody>
+    </table>
+  </div>
+  <script>
+    (function(){
+      var vals  = [154.35, 172.55, 163.15, 189.55, 235.76, 179.75, 163.02, 173.82, 147.86, 202.91, 183.36, 180.68, 202.88];
+      var weeks = ["13 Apr", "20 Apr", "27 Apr", "04 May", "11 May", "18 May", "25 May", "01 Jun", "08 Jun", "15 Jun", "22 Jun", "29 Jun", "06 Jul"];
+      var ctx   = document.getElementById('spark-26470').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: weeks,
+          datasets: [{
+            data: vals,
+            borderColor: '#6366f1',
+            borderWidth: 1.5,
+            pointRadius: 0,
+            tension: 0.3,
+            fill: false,
+          }]
+        },
+        options: {
+          animation: false,
+          plugins: { legend: { display: false }, tooltip: { enabled: true } },
+          scales: { x: { display: false }, y: { display: false } },
+        }
+      });
+    })();
+  </script>
+</section>
+
+<section class="metric-card" id="metric-26471">
+  <div class="card-header">
+    <div>
+      <h2>Inbound (Receive)</h2>
+      <span class="card-sub">Last 13 weeks · UPH</span>
+    </div>
+    <a class="mb-link" href="https://metabase.internal.bigblue.co/question/26471" target="_blank">Open in Metabase ↗</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="wk-label">Week</th>
+          <th class="wh-col">EU-FRA-007<canvas id="spark-26471" class="spark"></canvas></th>
+          <th class="avg-col">Network avg</th>
+        </tr>
+      </thead>
+      <tbody><tr><td class='wk-label'>06 Jul <span class="badge">latest</span></td><td class='wh-col'>21.7<span class="arr up" title="+13.7%">↑</span></td><td class='avg-col'>22.4</td></tr><tr><td class='wk-label'>29 Jun</td><td class='wh-col'>19.1<span class="arr dn" title="-45.0%">↓</span></td><td class='avg-col'>22.1</td></tr><tr><td class='wk-label'>22 Jun</td><td class='wh-col'>34.7<span class="arr up" title="+15.3%">↑</span></td><td class='avg-col'>19.7</td></tr><tr><td class='wk-label'>15 Jun</td><td class='wh-col'>30.1<span class="arr up" title="+13.0%">↑</span></td><td class='avg-col'>21.0</td></tr><tr><td class='wk-label'>08 Jun</td><td class='wh-col'>26.6<span class="arr up" title="+35.9%">↑</span></td><td class='avg-col'>22.9</td></tr><tr><td class='wk-label'>01 Jun</td><td class='wh-col'>19.6<span class="arr dn" title="-38.4%">↓</span></td><td class='avg-col'>15.3</td></tr><tr><td class='wk-label'>25 May</td><td class='wh-col'>31.8<span class="arr up" title="+66.3%">↑</span></td><td class='avg-col'>17.1</td></tr><tr><td class='wk-label'>18 May</td><td class='wh-col'>19.1<span class="arr flat">→</span></td><td class='avg-col'>19.0</td></tr><tr><td class='wk-label'>11 May</td><td class='wh-col'>18.9<span class="arr up" title="+12.5%">↑</span></td><td class='avg-col'>17.2</td></tr><tr><td class='wk-label'>04 May</td><td class='wh-col'>16.8<span class="arr dn" title="-5.0%">↓</span></td><td class='avg-col'>19.3</td></tr><tr><td class='wk-label'>27 Apr</td><td class='wh-col'>17.7<span class="arr dn" title="-16.5%">↓</span></td><td class='avg-col'>15.3</td></tr><tr><td class='wk-label'>20 Apr</td><td class='wh-col'>21.2<span class="arr up" title="+34.8%">↑</span></td><td class='avg-col'>16.2</td></tr><tr><td class='wk-label'>13 Apr</td><td class='wh-col'>15.7</td><td class='avg-col'>21.0</td></tr></tbody>
+    </table>
+  </div>
+  <script>
+    (function(){
+      var vals  = [15.71, 21.18, 17.7, 16.8, 18.9, 19.15, 31.85, 19.61, 26.64, 30.1, 34.7, 19.08, 21.69];
+      var weeks = ["13 Apr", "20 Apr", "27 Apr", "04 May", "11 May", "18 May", "25 May", "01 Jun", "08 Jun", "15 Jun", "22 Jun", "29 Jun", "06 Jul"];
+      var ctx   = document.getElementById('spark-26471').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: weeks,
+          datasets: [{
+            data: vals,
+            borderColor: '#6366f1',
+            borderWidth: 1.5,
+            pointRadius: 0,
+            tension: 0.3,
+            fill: false,
+          }]
+        },
+        options: {
+          animation: false,
+          plugins: { legend: { display: false }, tooltip: { enabled: true } },
+          scales: { x: { display: false }, y: { display: false } },
+        }
+      });
+    })();
+  </script>
+</section>
+
+<section class="metric-card" id="metric-26472">
+  <div class="card-header">
+    <div>
+      <h2>Replenishments</h2>
+      <span class="card-sub">Last 13 weeks · UPH</span>
+    </div>
+    <a class="mb-link" href="https://metabase.internal.bigblue.co/question/26472" target="_blank">Open in Metabase ↗</a>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th class="wk-label">Week</th>
+          <th class="wh-col">EU-FRA-007<canvas id="spark-26472" class="spark"></canvas></th>
+          <th class="avg-col">Network avg</th>
+        </tr>
+      </thead>
+      <tbody><tr><td class='wk-label'>06 Jul <span class="badge">latest</span></td><td class='wh-col'>2.1<span class="arr up" title="+41.0%">↑</span></td><td class='avg-col'>4.2</td></tr><tr><td class='wk-label'>29 Jun</td><td class='wh-col'>1.5<span class="arr dn" title="-31.6%">↓</span></td><td class='avg-col'>3.9</td></tr><tr><td class='wk-label'>22 Jun</td><td class='wh-col'>2.2<span class="arr up" title="+54.1%">↑</span></td><td class='avg-col'>3.3</td></tr><tr><td class='wk-label'>15 Jun</td><td class='wh-col'>1.4<span class="arr dn" title="-49.0%">↓</span></td><td class='avg-col'>3.7</td></tr><tr><td class='wk-label'>08 Jun</td><td class='wh-col'>2.8<span class="arr up" title="+25.5%">↑</span></td><td class='avg-col'>4.3</td></tr><tr><td class='wk-label'>01 Jun</td><td class='wh-col'>2.2<span class="arr dn" title="-33.9%">↓</span></td><td class='avg-col'>3.6</td></tr><tr><td class='wk-label'>25 May</td><td class='wh-col'>3.3<span class="arr up" title="+32.4%">↑</span></td><td class='avg-col'>4.0</td></tr><tr><td class='wk-label'>18 May</td><td class='wh-col'>2.5<span class="arr up" title="+142.5%">↑</span></td><td class='avg-col'>3.7</td></tr><tr><td class='wk-label'>11 May</td><td class='wh-col'>1.0<span class="arr dn" title="-38.5%">↓</span></td><td class='avg-col'>3.8</td></tr><tr><td class='wk-label'>04 May</td><td class='wh-col'>1.7<span class="arr up" title="+14.7%">↑</span></td><td class='avg-col'>3.8</td></tr><tr><td class='wk-label'>27 Apr</td><td class='wh-col'>1.5<span class="arr flat">→</span></td><td class='avg-col'>5.4</td></tr><tr><td class='wk-label'>20 Apr</td><td class='wh-col'>1.4<span class="arr dn" title="-17.5%">↓</span></td><td class='avg-col'>4.5</td></tr><tr><td class='wk-label'>13 Apr</td><td class='wh-col'>1.8</td><td class='avg-col'>3.6</td></tr></tbody>
+    </table>
+  </div>
+  <script>
+    (function(){
+      var vals  = [1.76, 1.45, 1.47, 1.68, 1.04, 2.51, 3.32, 2.2, 2.76, 1.41, 2.17, 1.48, 2.09];
+      var weeks = ["13 Apr", "20 Apr", "27 Apr", "04 May", "11 May", "18 May", "25 May", "01 Jun", "08 Jun", "15 Jun", "22 Jun", "29 Jun", "06 Jul"];
+      var ctx   = document.getElementById('spark-26472').getContext('2d');
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: weeks,
+          datasets: [{
+            data: vals,
+            borderColor: '#6366f1',
+            borderWidth: 1.5,
+            pointRadius: 0,
+            tension: 0.3,
+            fill: false,
+          }]
+        },
+        options: {
+          animation: false,
+          plugins: { legend: { display: false }, tooltip: { enabled: true } },
+          scales: { x: { display: false }, y: { display: false } },
+        }
+      });
+    })();
+  </script>
+</section>
+</main>
+
+<div class="footer">Generated 2026-07-16 08:51 · Bigblue Operations</div>
+</body>
+</html>
