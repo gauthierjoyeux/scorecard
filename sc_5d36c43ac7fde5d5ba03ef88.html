@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EU-ESP-002 · Scorecard · Week 29 · 23 July 2026</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --hdr:    #1e1b4b;
+    --card:   #ffffff;
+    --bg:     #f1f5f9;
+    --border: #e2e8f0;
+    --muted:  #64748b;
+    --wh-txt: #1e293b;
+    --avg-txt:#6366f1;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: var(--bg); color: #1e293b; }
+
+  .topbar { background: var(--hdr); color: white; padding: 18px 32px;
+            display: flex; align-items: center; justify-content: space-between;
+            position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px #0004; }
+  .topbar .h1   { font-size: 1.1rem; font-weight: 700; letter-spacing: .04em; }
+  .topbar .week { font-size: .8rem; color: #a5b4fc; margin-top: 2px; }
+  .topbar .legend { display: flex; gap: 16px; font-size: .75rem; align-items: center; }
+  .topbar .leg { display: flex; align-items: center; gap: 6px; }
+
+  .main { max-width: 1100px; margin: 0 auto; padding: 28px 24px 60px; }
+
+  .scorecard-card { background: var(--card); border: 1px solid var(--border);
+                    border-radius: 12px; box-shadow: 0 1px 3px #0001; overflow: hidden; }
+  .card-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); }
+  .card-header h2 { font-size: 1rem; font-weight: 700; color: var(--hdr); }
+  .card-sub { font-size: .75rem; color: var(--muted); margin-top: 3px; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+
+  th { padding: 10px 16px; text-align: center; background: #f8fafc;
+       font-weight: 600; color: var(--muted); font-size: .75rem;
+       border-bottom: 2px solid var(--border); white-space: nowrap; }
+  th.wk-label { text-align: left; min-width: 90px; }
+  th.metric-col { min-width: 110px; }
+  th .unit { display: block; font-size: .65rem; font-weight: 400;
+             color: #94a3b8; margin-top: 2px; letter-spacing: .04em; }
+
+  td { padding: 10px 16px; text-align: center; border-bottom: 1px solid var(--border);
+       vertical-align: middle; }
+  td.wk-label { text-align: left; font-size: .8rem; color: var(--muted);
+                font-weight: 500; white-space: nowrap; }
+  td.metric-col { padding: 8px 16px; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fafc; }
+
+  .wh-val { display: block; font-weight: 700; font-size: .9rem; color: var(--wh-txt); }
+  .net-avg { display: block; font-size: .72rem; color: var(--avg-txt);
+             margin-top: 2px; font-weight: 500; }
+
+  .badge { background: #6366f1; color: white; font-size: .62rem; font-weight: 700;
+           padding: 1px 6px; border-radius: 20px; margin-left: 6px;
+           vertical-align: middle; letter-spacing: .04em; }
+  .arr { font-size: .7rem; margin-left: 3px; }
+  .arr.up   { color: #16a34a; }
+  .arr.dn   { color: #dc2626; }
+  .arr.flat { color: #94a3b8; }
+
+  .footer { text-align: center; font-size: .72rem; color: var(--muted); padding: 24px; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div>
+    <div class="h1">BIGBLUE · EU-ESP-002</div>
+    <div class="week">Week 29 · 23 July 2026</div>
+  </div>
+  <div class="legend">
+    <span class="leg"><strong style="font-size:.9rem">123.4</strong>&nbsp;warehouse UPH</span>
+    <span class="leg" style="color:#a5b4fc">avg 123.4 = network average</span>
+  </div>
+</header>
+
+<main class="main">
+  <div class="scorecard-card">
+    <div class="card-header">
+      <div class="h2">Productivity — last 13 weeks</div>
+      <div class="card-sub">All metrics in UPH · Network avg shown below each value</div>
+    </div>
+    
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th class="wk-label">Week</th>
+        <th class="metric-col">B2C Pack<span class="unit">UPH</span></th><th class="metric-col">B2C NAC<span class="unit">UPH</span></th><th class="metric-col missing">B2C Pick<span class="unit">UPH</span></th><th class="metric-col missing">Ship<span class="unit">UPH</span></th><th class="metric-col missing">Inbound<span class="unit">UPH</span></th><th class="metric-col missing">Replenishments<span class="unit">UPH</span></th>
+      </tr>
+    </thead>
+    <tbody><tr><td class='wk-label'>13 Jul <span class="badge">latest</span></td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 121.1</span></td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 3.1</span></td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td></tr><tr><td class='wk-label'>06 Jul</td><td class="metric-col"><span class="wh-val">100.9</span><span class="net-avg">avg 126.1</span></td><td class="metric-col"><span class="wh-val">1.3</span><span class="net-avg">avg 2.9</span></td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td></tr><tr><td class='wk-label'>29 Jun</td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 121.2</span></td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 3.0</span></td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td></tr><tr><td class='wk-label'>22 Jun</td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 104.9</span></td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 2.8</span></td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td></tr><tr><td class='wk-label'>15 Jun</td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 105.1</span></td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 2.9</span></td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td></tr><tr><td class='wk-label'>08 Jun</td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 121.9</span></td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 2.9</span></td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td></tr><tr><td class='wk-label'>01 Jun</td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 136.5</span></td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 3.0</span></td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td></tr><tr><td class='wk-label'>25 May</td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 114.5</span></td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 2.9</span></td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td></tr><tr><td class='wk-label'>18 May</td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 135.1</span></td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 3.0</span></td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td></tr><tr><td class='wk-label'>11 May</td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 128.2</span></td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 2.8</span></td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td></tr><tr><td class='wk-label'>04 May</td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 127.0</span></td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 2.8</span></td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td></tr><tr><td class='wk-label'>27 Apr</td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 115.0</span></td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 2.8</span></td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td></tr><tr><td class='wk-label'>20 Apr</td><td class="metric-col">—</td><td class="metric-col"><span class="wh-val">—</span><span class="net-avg">avg 2.9</span></td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td><td class="metric-col">—</td></tr></tbody>
+  </table>
+</div>
+  </div>
+</main>
+
+<div class="footer">Generated 2026-07-23 15:47 · Bigblue Operations</div>
+</body>
+</html>
