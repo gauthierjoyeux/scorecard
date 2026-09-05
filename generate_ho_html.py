@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Bigblue Happy Orders Scorecard — HTML generator.
 
-Reads ho_data.json (downloaded via fetch_ho_data.js) and writes ho_index.html.
+Reads ho_data.json (downloaded via fetch_mb.py) and writes ho_index.html.
 """
 
 import glob
@@ -28,9 +28,9 @@ ALL_BUCKETS = [
 ]
 
 BUCKET_LABELS = [
-    "Start of prep", "Picking committed", "Picking ended",
-    "Packed", "End of prep", "Handed over",
-    "Shipped", "All timestamps OK",
+    "1. Start of prep", "2. Picking committed", "3. Picking ended",
+    "4. Packed", "5. End of prep", "6. Handed over",
+    "7. Shipped", "8. All timestamps OK",
 ]
 
 BUCKET_COLORS = [
@@ -120,6 +120,68 @@ def prepare_failure_drivers(rec: dict) -> dict:
     return result
 
 
+def prepare_failure_breakdown_weekly(rec: dict) -> dict:
+    """26829: % per bucket per (wh, week). Returns {wh: {week: {bucket: pct}}, "Network": {week: {bucket: pct}}}."""
+    df = pd.DataFrame(rec["rows"], columns=rec["cols"])
+    df["_week"] = df["expected_shipping_day"].apply(_week)
+    df = df[df["_week"].notna()].copy()
+    df["count"] = pd.to_numeric(df["count"], errors="coerce").fillna(0)
+
+    result: dict = {}
+    for (week, wh), grp in df.groupby(["_week", "warehouse_id"]):
+        total = grp["count"].sum()
+        if total == 0:
+            continue
+        buckets = {}
+        for _, row in grp.iterrows():
+            b = row["First failed timestamp"]
+            buckets[b] = round(float(row["count"] / total * 100), 1)
+        result.setdefault(wh, {})[week] = buckets
+
+    # Network: sum counts across all WHs per week
+    for week, grp in df.groupby("_week"):
+        total = grp["count"].sum()
+        if total == 0:
+            continue
+        buckets = {}
+        for b, sub in grp.groupby("First failed timestamp"):
+            buckets[b] = round(float(sub["count"].sum() / total * 100), 1)
+        result.setdefault("Network", {})[week] = buckets
+
+    return result
+
+
+def prepare_failure_breakdown_daily(rec: dict) -> dict:
+    """ho_daily: % per bucket per (wh, day). Returns {wh: {day: {bucket: pct}}, "Network": {day: {bucket: pct}}}."""
+    df = pd.DataFrame(rec["rows"], columns=rec["cols"])
+    df["_day"] = df["expected_shipping_day"].apply(_week)  # truncates to date
+    df = df[df["_day"].notna()].copy()
+    df["count"] = pd.to_numeric(df["count"], errors="coerce").fillna(0)
+
+    result: dict = {}
+    for (day, wh), grp in df.groupby(["_day", "warehouse_id"]):
+        total = grp["count"].sum()
+        if total == 0:
+            continue
+        buckets = {}
+        for _, row in grp.iterrows():
+            b = row["First failed timestamp"]
+            buckets[b] = round(float(row["count"] / total * 100), 1)
+        result.setdefault(wh, {})[day] = buckets
+
+    # Network: across all WHs per day
+    for day, grp in df.groupby("_day"):
+        total = grp["count"].sum()
+        if total == 0:
+            continue
+        buckets = {}
+        for b, sub in grp.groupby("First failed timestamp"):
+            buckets[b] = round(float(sub["count"].sum() / total * 100), 1)
+        result.setdefault("Network", {})[day] = buckets
+
+    return result
+
+
 def prepare_merchants(rec: dict) -> dict:
     """26831: merchant breakdown per (wh, week). Returns {wh: {week: [{…}]}}."""
     df = pd.DataFrame(rec["rows"], columns=rec["cols"])
@@ -153,11 +215,31 @@ def build_blob() -> dict:
     fail_driv = prepare_failure_drivers(data[26829])
     merchants = prepare_merchants(data[26831])
 
+    fail_weekly = prepare_failure_breakdown_weekly(data[26829])
+
+    # Override W-1 data with the richer CASE-based query (ho_w1_breakdown) when available.
+    # It uses the same columns as 26829 so prepare_failure_breakdown_weekly works on it directly.
+    _w1_rec = data.get("ho_w1_breakdown")
+    if _w1_rec and _w1_rec["rows"]:
+        w1_breakdown = prepare_failure_breakdown_weekly(_w1_rec)
+        # Merge: for each entity (wh + Network), replace its W-1 week entry with the new source
+        _w1_weeks = sorted(
+            {w for wh_d in w1_breakdown.values() for w in wh_d},
+            reverse=True,
+        )
+        _w1_week = _w1_weeks[0] if _w1_weeks else None
+        if _w1_week:
+            for entity, week_data in w1_breakdown.items():
+                if _w1_week in week_data:
+                    fail_weekly.setdefault(entity, {})[_w1_week] = week_data[_w1_week]
+
+    fail_daily  = prepare_failure_breakdown_daily(data.get("ho_daily", {"rows": [], "cols": ["warehouse_id", "expected_shipping_day", "First failed timestamp", "count"]}))
+
     warehouses    = sorted(ho_pivot.columns.tolist())
     all_ho_weeks  = ho_pivot.index.tolist()   # newest first
 
-    # HO ratio: skip SKIP_RECENT most recent, show N_WEEKS_HO
-    ho_weeks = all_ho_weeks[SKIP_RECENT : SKIP_RECENT + N_WEEKS_HO]
+    # HO ratio: skip only 1 most recent week (current week, data incomplete), show N_WEEKS_HO
+    ho_weeks = all_ho_weeks[1 : 1 + N_WEEKS_HO]
 
     # Predictor: N_WEEKS_PRED most recent
     all_pred_weeks = sorted(
@@ -165,6 +247,13 @@ def build_blob() -> dict:
         reverse=True,
     )
     pred_weeks = all_pred_weeks[:N_WEEKS_PRED]
+
+    # W-1 = last complete week: skip SKIP_RECENT most recent (data lag), same as HO ratio
+    all_fail_weeks = sorted(
+        {w for wh_d in fail_weekly.values() for w in wh_d if wh_d},
+        reverse=True,
+    )
+    w1 = all_fail_weeks[SKIP_RECENT] if len(all_fail_weeks) > SKIP_RECENT else (all_fail_weeks[0] if all_fail_weeks else None)
 
     # Serialize HO ratio
     ho_ratio_out: dict = {}
@@ -181,10 +270,14 @@ def build_blob() -> dict:
         "warehouses":       warehouses,
         "ho_weeks":         ho_weeks,
         "pred_weeks":       pred_weeks,
+        "w1":               w1,
+        "fail_weeks":       all_fail_weeks[:N_WEEKS_PRED],
         "ho_ratio":         ho_ratio_out,
         "bb_avg":           {k: round(float(v), 4) for k, v in bb_avg.items() if not pd.isna(v)},
         "predictor":        predictor,
         "failure_drivers":  fail_driv,
+        "failure_weekly":   fail_weekly,
+        "failure_daily":    fail_daily,
         "merchants":        merchants,
         "all_buckets":      ALL_BUCKETS,
         "bucket_labels":    BUCKET_LABELS,
@@ -254,6 +347,12 @@ table.sc tr.bb-row td { background: #E3F2FD; font-weight: 600; }
 table.sc tr.bb-row td.wh-label { background: #BBDEFB; }
 table.sc tr:hover td:not(.wh-label) { filter: brightness(.95); }
 
+/* ── Breakdown table ── */
+table.sc td.act  { background: #FFF3E0; color: #E65100; font-weight: 600; }
+table.sc td.ok   { background: #E8F5E9; color: #2E7D32; font-weight: 600; }
+table.sc th.act  { background: #BF360C; }
+table.sc th.ok   { background: #1B5E20; }
+
 /* ── Charts ── */
 .chart-wrap { position: relative; height: 260px; }
 .charts-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
@@ -291,7 +390,7 @@ table.mcht tr:nth-child(even) td { background: #FAFAFA; }
     <section>
       <h2>Happy Orders Ratio — by Warehouse</h2>
       <p class="subtitle">
-        Weeks W-3 to W-8 (2 most recent weeks excluded — data not yet complete).
+        Weeks W-1 to W-6 (current week excluded — data not yet complete).
         <strong>Higher % = better.</strong>
         Coloring applied to most recent shown week only.
       </p>
@@ -304,17 +403,16 @@ table.mcht tr:nth-child(even) td { background: #FAFAFA; }
     </section>
 
     <section>
-      <h2>WH Predictor Metric (W-1 &amp; W-2)</h2>
+      <h2>First Failure Point Breakdown — W-1</h2>
       <p class="subtitle">
-        % of orders reaching a WH-actionable failure timestamp (buckets 1–6).
-        <strong>Lower % = better.</strong>
-        Coloring applied to most recent week (W-1).
+        % of orders by first failure timestamp for last complete week.
+        <strong>Buckets 1–6</strong> are WH-actionable (orange). <strong>Buckets 7–8</strong> are not (green).
       </p>
       <div class="legend">
-        <div class="legend-item"><div class="legend-dot" style="background:#C8E6C9"></div> Lowest % (best)</div>
-        <div class="legend-item"><div class="legend-dot" style="background:#FFCDD2"></div> Highest % (worst)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#FFF3E0;border:1px solid #E65100"></div> WH-actionable (1–6)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#E8F5E9;border:1px solid #2E7D32"></div> Not actionable (7–8)</div>
       </div>
-      <div class="table-wrap" id="predictor-table"></div>
+      <div class="table-wrap" id="breakdown-w1-table"></div>
     </section>
 
   </div>
@@ -324,20 +422,25 @@ table.mcht tr:nth-child(even) td { background: #FAFAFA; }
 const DATA = __DATA_PLACEHOLDER__;
 
 // ── Formatting helpers ──────────────────────────────────────────────────────
-function fmtPct(v, dec=1) {
+function fmtPct(v, dec=0) {
   return v == null ? '—' : (v * 100).toFixed(dec) + '%';
 }
 function fmtPred(v) {
+  return v == null ? '—' : v.toFixed(1) + '%';
+}
+function fmtBucket(v) {
   return v == null ? '—' : v.toFixed(1) + '%';
 }
 function fmtWeek(w) {
   const d = new Date(w + 'T12:00:00');
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' });
 }
+function fmtDay(w) {
+  const d = new Date(w + 'T12:00:00');
+  return d.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' });
+}
 
 // ── Color ranking ───────────────────────────────────────────────────────────
-// higherIsBetter=true → green=top, red=bottom3
-// higherIsBetter=false → green=lowest, red=top3
 function rankColors(valueMap, higherIsBetter) {
   const whs = Object.keys(valueMap).filter(k => valueMap[k] != null);
   const sorted = [...whs].sort((a, b) =>
@@ -377,7 +480,6 @@ function renderHoRatioTable() {
   html += '</tr></thead><tbody>';
 
   warehouses.forEach(wh => {
-    // Rank colors for the most recent shown week
     const latestWeek = ho_weeks[0];
     const latestVals = {};
     warehouses.forEach(w2 => latestVals[w2] = ho_ratio[w2]?.[latestWeek] ?? null);
@@ -402,41 +504,86 @@ function renderHoRatioTable() {
   document.getElementById('ho-ratio-table').innerHTML = html;
 }
 
-// ── Render predictor table ──────────────────────────────────────────────────
-function renderPredictorTable() {
-  const { pred_weeks, warehouses, predictor } = DATA;
-  const weeks = pred_weeks.slice(0, 2);  // W-1 and W-2 only in recap
+// ── Render First Failure breakdown W-1 table ────────────────────────────────
+function renderBreakdownW1Table() {
+  const { warehouses, w1, failure_weekly, all_buckets, bucket_labels, bucket_colors } = DATA;
+  if (!w1) {
+    document.getElementById('breakdown-w1-table').innerHTML = '<p style="color:#999">No data.</p>';
+    return;
+  }
 
-  let html = '<table class="sc"><thead><tr><th>Warehouse</th>';
-  weeks.forEach(w => html += `<th>${fmtWeek(w)}</th>`);
+  const actionable = new Set(DATA.wh_actionable);
+  const rows = ['Network', ...warehouses];
+
+  let html = `<table class="sc"><thead><tr><th>Warehouse</th>`;
+  all_buckets.forEach((b, i) => {
+    const cls = actionable.has(b) ? 'act' : 'ok';
+    html += `<th class="${cls}">${bucket_labels[i]}</th>`;
+  });
   html += '</tr></thead><tbody>';
 
-  warehouses.forEach(wh => {
-    const latestVals = {};
-    warehouses.forEach(w2 => latestVals[w2] = predictor[w2]?.[weeks[0]] ?? null);
-    const colors = rankColors(latestVals, false);
-
-    html += `<tr><td class="wh-label">${wh}</td>`;
-    weeks.forEach((week, i) => {
-      const val = predictor[wh]?.[week];
-      const bg  = i === 0 ? (colors[wh] || '#fff') : '#fff';
-      html += `<td style="background:${bg}">${fmtPred(val)}</td>`;
+  rows.forEach(row => {
+    const isNetwork = row === 'Network';
+    const data = failure_weekly[row]?.[w1] || {};
+    html += `<tr${isNetwork ? ' class="bb-row"' : ''}>`;
+    html += `<td class="wh-label">${isNetwork ? `Network (${fmtWeek(w1)})` : row}</td>`;
+    all_buckets.forEach(b => {
+      const v = data[b];
+      const actionCls = actionable.has(b) ? 'act' : 'ok';
+      html += `<td class="${actionCls}">${v != null ? v.toFixed(1) + '%' : '—'}</td>`;
     });
     html += '</tr>';
   });
 
   html += '</tbody></table>';
-  document.getElementById('predictor-table').innerHTML = html;
+  document.getElementById('breakdown-w1-table').innerHTML = html;
+}
+
+// ── Build breakdown table HTML ──────────────────────────────────────────────
+function buildBreakdownTable(data, periods, fmtFn) {
+  // data: {period: {bucket: pct}}
+  // periods: sorted array (desc)
+  const { all_buckets, bucket_labels, wh_actionable } = DATA;
+  const actionable = new Set(wh_actionable);
+
+  let html = '<table class="sc"><thead><tr><th>Period</th>';
+  all_buckets.forEach((b, i) => {
+    const cls = actionable.has(b) ? 'act' : 'ok';
+    html += `<th class="${cls}">${bucket_labels[i]}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  periods.forEach((p, idx) => {
+    const row = data[p] || {};
+    html += `<tr><td class="wh-label">${fmtFn(p)}${idx === 0 ? ' <span style="font-size:10px;background:#1A237E;color:white;padding:1px 5px;border-radius:3px;margin-left:4px">latest</span>' : ''}</td>`;
+    all_buckets.forEach(b => {
+      const v = row[b];
+      const cls = actionable.has(b) ? 'act' : 'ok';
+      html += `<td class="${cls}">${v != null ? v.toFixed(1) + '%' : '—'}</td>`;
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+  return html;
 }
 
 // ── Render per-WH tab ───────────────────────────────────────────────────────
 function renderWhTab(wh) {
-  const { pred_weeks, predictor, failure_drivers, merchants,
-          all_buckets, bucket_labels, bucket_colors } = DATA;
+  const { pred_weeks, fail_weeks, predictor, failure_drivers, failure_weekly, failure_daily,
+          merchants, all_buckets, bucket_labels, bucket_colors } = DATA;
 
   const pane = document.getElementById(`tab-${wh}`);
   const latestWeeks = pred_weeks.slice(0, 2);
   const latestWeek  = pred_weeks[0];
+
+  // Daily: all days for this WH, sorted desc
+  const dailyData = failure_daily[wh] || {};
+  const dailyDays = Object.keys(dailyData).sort().reverse();
+
+  // Weekly breakdown for this WH
+  const weeklyData = failure_weekly[wh] || {};
+  const weeklyWeeks = fail_weeks.filter(w => weeklyData[w]);
 
   pane.innerHTML = `
     <section>
@@ -455,6 +602,18 @@ function renderWhTab(wh) {
             <div class="chart-wrap"><canvas id="cf-${wh}-${i}"></canvas></div>
           </div>`).join('')}
       </div>
+    </section>
+
+    <section>
+      <h3>First Failure Breakdown by Week — ${wh}</h3>
+      <p class="subtitle">% of orders per failure bucket, by week. Buckets 1–6 are WH-actionable (orange).</p>
+      <div class="table-wrap" id="wkb-${wh}"></div>
+    </section>
+
+    <section>
+      <h3>First Failure Breakdown by Day — W-1 — ${wh}</h3>
+      <p class="subtitle">Daily breakdown for the last 14 days. Buckets 1–6 are WH-actionable (orange).</p>
+      <div class="table-wrap" id="dayb-${wh}"></div>
     </section>
 
     <section>
@@ -512,6 +671,14 @@ function renderWhTab(wh) {
     });
   });
 
+  // Weekly breakdown table
+  document.getElementById(`wkb-${wh}`).innerHTML =
+    weeklyWeeks.length ? buildBreakdownTable(weeklyData, weeklyWeeks, fmtWeek) : '<p style="color:#999">No data.</p>';
+
+  // Daily breakdown table
+  document.getElementById(`dayb-${wh}`).innerHTML =
+    dailyDays.length ? buildBreakdownTable(dailyData, dailyDays, fmtDay) : '<p style="color:#999">No daily data available.</p>';
+
   // Merchant table
   const mData = merchants[wh]?.[latestWeek] || [];
   let mHtml = '<table class="mcht"><thead><tr><th>Merchant</th><th>Orders</th><th>HO Ratio</th></tr></thead><tbody>';
@@ -531,7 +698,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const content = document.getElementById('content');
 
   DATA.warehouses.forEach(wh => {
-    // Tab button
     const btn = document.createElement('button');
     btn.className = 'tab-btn';
     btn.dataset.tab = wh;
@@ -539,7 +705,6 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.onclick = () => switchTab(wh);
     tabBar.appendChild(btn);
 
-    // Tab pane (empty — filled lazily on first click)
     const pane = document.createElement('div');
     pane.id = `tab-${wh}`;
     pane.className = 'tab-pane';
@@ -547,7 +712,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   renderHoRatioTable();
-  renderPredictorTable();
+  renderBreakdownW1Table();
 });
 </script>
 </body>
@@ -566,6 +731,9 @@ def main() -> None:
     print(f"  Warehouses: {', '.join(blob['warehouses'])}")
     print(f"  HO weeks  : {blob['ho_weeks'][:3]}…")
     print(f"  Pred weeks: {blob['pred_weeks'][:3]}…")
+    print(f"  W-1       : {blob['w1']}")
+    daily_whs = [wh for wh in blob['warehouses'] if blob['failure_daily'].get(wh)]
+    print(f"  Daily data: {', '.join(daily_whs) if daily_whs else 'none'}")
 
     html = HTML_TEMPLATE.replace(
         "__DATA_PLACEHOLDER__",

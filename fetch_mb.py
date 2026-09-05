@@ -53,6 +53,87 @@ def load_token() -> str:
     return token
 
 
+_HO_W1_QUERY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ho_w1_query.json")
+
+
+def fetch_ho_w1_breakdown(session: str) -> dict:
+    """Fetch W-1 failure-timestamp breakdown (all WHs) using the richer CASE-based query.
+
+    The query is stored verbatim in ho_w1_query.json (extracted from the Metabase question URL).
+    It returns (warehouse_id, expected_shipping_day week, First failed timestamp, count)
+    filtered to last 1 week.
+    """
+    with open(_HO_W1_QUERY_FILE) as f:
+        query = json.load(f)
+    resp = requests.post(
+        f"{METABASE_URL}/api/dataset",
+        headers={"X-Metabase-Session": session, "Content-Type": "application/json"},
+        json=query,
+        timeout=120,
+    )
+    if resp.status_code not in (200, 202):
+        resp.raise_for_status()
+    data = resp.json()["data"]
+    return {
+        "id": "ho_w1_breakdown",
+        "cols": [c["name"] for c in data["cols"]],
+        "rows": data["rows"],
+    }
+
+
+def fetch_ho_daily(session: str) -> dict:
+    """Fetch failure-timestamp breakdown at daily granularity (card 26829 modified to day-level)."""
+    # Load card 26829's query and swap temporal-unit week→day, filter to last 14 days
+    r = requests.get(
+        f"{METABASE_URL}/api/card/26829",
+        headers={"X-Metabase-Session": session},
+        timeout=30,
+    )
+    r.raise_for_status()
+    dq = r.json()["dataset_query"]
+
+    import copy
+    dq2 = copy.deepcopy(dq)
+    stage = dq2["stages"][0]
+
+    # Change temporal-unit week → day in breakout
+    for b in stage.get("breakout", []):
+        if isinstance(b, list) and len(b) >= 2 and isinstance(b[1], dict):
+            if b[1].get("temporal-unit") == "week":
+                b[1]["temporal-unit"] = "day"
+
+    # Replace time-interval filter: last 14 days (covers W-1 fully)
+    new_filters = []
+    for f in stage.get("filters", []):
+        if isinstance(f, list) and f[0] == "time-interval":
+            # Replace with last-14-days
+            f2 = copy.deepcopy(f)
+            # f2 structure: ["time-interval", opts, field_ref, n, unit]
+            if len(f2) >= 5:
+                f2[3] = -14
+                f2[4] = "day"
+            new_filters.append(f2)
+        else:
+            new_filters.append(f)
+    stage["filters"] = new_filters
+
+    resp = requests.post(
+        f"{METABASE_URL}/api/dataset",
+        headers={"X-Metabase-Session": session, "Content-Type": "application/json"},
+        json=dq2,
+        timeout=120,
+    )
+    # Metabase returns 202 for async queries that resolve synchronously
+    if resp.status_code not in (200, 202):
+        resp.raise_for_status()
+    data = resp.json()["data"]
+    return {
+        "id": "ho_daily",
+        "cols": [c["name"] for c in data["cols"]],
+        "rows": data["rows"],
+    }
+
+
 def fetch_card(session: str, card_id: int, pivot: bool) -> dict:
     endpoint = (
         f"{METABASE_URL}/api/card/pivot/{card_id}/query"
@@ -112,6 +193,11 @@ def main():
 
     print("\n[2/2] Happy Orders Scorecard…")
     ho_data = fetch_all(HO_QUESTIONS, "HO")
+    session = load_token()
+    print("  → HO W-1 breakdown (richer CASE query)…", flush=True)
+    ho_data.append(fetch_ho_w1_breakdown(session))
+    print("  → HO daily breakdown (card 26829 · day)…", flush=True)
+    ho_data.append(fetch_ho_daily(session))
     ho_path = save(ho_data, "ho_data.json")
     print(f"  ✓ {ho_path}")
 
