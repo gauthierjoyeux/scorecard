@@ -220,7 +220,9 @@ def build_blob() -> dict:
     _weekly_rec = data.get("ho_weekly_breakdown") or data.get(26829)
     fail_weekly = prepare_failure_breakdown_weekly(_weekly_rec)
 
-    # W-1 Recap table: override with the dedicated -1 week richer query (ho_w1_breakdown).
+    # W-1 Recap table: use the dedicated -1 week richer query (ho_w1_breakdown).
+    # Its week IS the W-1 week — no need to compute via SKIP_RECENT.
+    _w1_canonical = None
     _w1_rec = data.get("ho_w1_breakdown")
     if _w1_rec and _w1_rec["rows"]:
         w1_breakdown = prepare_failure_breakdown_weekly(_w1_rec)
@@ -230,6 +232,7 @@ def build_blob() -> dict:
         )
         _w1_week = _w1_weeks[0] if _w1_weeks else None
         if _w1_week:
+            _w1_canonical = _w1_week   # authoritative W-1 week from the dedicated query
             for entity, week_data in w1_breakdown.items():
                 if _w1_week in week_data:
                     fail_weekly.setdefault(entity, {})[_w1_week] = week_data[_w1_week]
@@ -252,12 +255,16 @@ def build_blob() -> dict:
     )
     pred_weeks = all_pred_weeks[:N_WEEKS_PRED]
 
-    # W-1 = last complete week: skip SKIP_RECENT most recent (data lag), same as HO ratio
+    # W-1: prefer the week from the dedicated ho_w1_breakdown query (it targets last complete week).
+    # Fall back to SKIP_RECENT logic only when that record is absent.
     all_fail_weeks = sorted(
         {w for wh_d in fail_weekly.values() for w in wh_d if wh_d},
         reverse=True,
     )
-    w1 = all_fail_weeks[SKIP_RECENT] if len(all_fail_weeks) > SKIP_RECENT else (all_fail_weeks[0] if all_fail_weeks else None)
+    if _w1_canonical:
+        w1 = _w1_canonical
+    else:
+        w1 = all_fail_weeks[SKIP_RECENT] if len(all_fail_weeks) > SKIP_RECENT else (all_fail_weeks[0] if all_fail_weeks else None)
 
     # Serialize HO ratio
     ho_ratio_out: dict = {}
