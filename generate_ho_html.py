@@ -215,14 +215,15 @@ def build_blob() -> dict:
     fail_driv = prepare_failure_drivers(data[26829])
     merchants = prepare_merchants(data[26831])
 
-    fail_weekly = prepare_failure_breakdown_weekly(data[26829])
+    # Per-WH weekly breakdown: use the richer CASE-based query (ho_weekly_breakdown, -3 months).
+    # Fall back to card 26829 if not present (backwards compat with older ho_data.json).
+    _weekly_rec = data.get("ho_weekly_breakdown") or data.get(26829)
+    fail_weekly = prepare_failure_breakdown_weekly(_weekly_rec)
 
-    # Override W-1 data with the richer CASE-based query (ho_w1_breakdown) when available.
-    # It uses the same columns as 26829 so prepare_failure_breakdown_weekly works on it directly.
+    # W-1 Recap table: override with the dedicated -1 week richer query (ho_w1_breakdown).
     _w1_rec = data.get("ho_w1_breakdown")
     if _w1_rec and _w1_rec["rows"]:
         w1_breakdown = prepare_failure_breakdown_weekly(_w1_rec)
-        # Merge: for each entity (wh + Network), replace its W-1 week entry with the new source
         _w1_weeks = sorted(
             {w for wh_d in w1_breakdown.values() for w in wh_d},
             reverse=True,
@@ -233,7 +234,10 @@ def build_blob() -> dict:
                 if _w1_week in week_data:
                     fail_weekly.setdefault(entity, {})[_w1_week] = week_data[_w1_week]
 
-    fail_daily  = prepare_failure_breakdown_daily(data.get("ho_daily", {"rows": [], "cols": ["warehouse_id", "expected_shipping_day", "First failed timestamp", "count"]}))
+    # Per-WH daily breakdown: use the richer CASE-based query (ho_daily_breakdown, -7 days).
+    # Fall back to ho_daily (card 26829 day-level) if not present.
+    _daily_rec = data.get("ho_daily_breakdown") or data.get("ho_daily") or {"rows": [], "cols": ["warehouse_id", "expected_shipping_day", "First failed timestamp", "count"]}
+    fail_daily = prepare_failure_breakdown_daily(_daily_rec)
 
     warehouses    = sorted(ho_pivot.columns.tolist())
     all_ho_weeks  = ho_pivot.index.tolist()   # newest first

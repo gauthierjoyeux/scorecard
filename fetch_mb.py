@@ -53,7 +53,22 @@ def load_token() -> str:
     return token
 
 
-_HO_W1_QUERY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ho_w1_query.json")
+_HO_W1_QUERY_FILE      = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ho_w1_query.json")
+_HO_WEEKLY_QUERY_FILE  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ho_weekly_breakdown_query.json")
+_HO_DAILY_QUERY_FILE   = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ho_daily_breakdown_query.json")
+
+
+def _post_dataset(session: str, query: dict) -> dict:
+    resp = requests.post(
+        f"{METABASE_URL}/api/dataset",
+        headers={"X-Metabase-Session": session, "Content-Type": "application/json"},
+        json=query,
+        timeout=120,
+    )
+    if resp.status_code not in (200, 202):
+        resp.raise_for_status()
+    data = resp.json()["data"]
+    return {"cols": [c["name"] for c in data["cols"]], "rows": data["rows"]}
 
 
 def fetch_ho_w1_breakdown(session: str) -> dict:
@@ -65,20 +80,24 @@ def fetch_ho_w1_breakdown(session: str) -> dict:
     """
     with open(_HO_W1_QUERY_FILE) as f:
         query = json.load(f)
-    resp = requests.post(
-        f"{METABASE_URL}/api/dataset",
-        headers={"X-Metabase-Session": session, "Content-Type": "application/json"},
-        json=query,
-        timeout=120,
-    )
-    if resp.status_code not in (200, 202):
-        resp.raise_for_status()
-    data = resp.json()["data"]
-    return {
-        "id": "ho_w1_breakdown",
-        "cols": [c["name"] for c in data["cols"]],
-        "rows": data["rows"],
-    }
+    d = _post_dataset(session, query)
+    return {"id": "ho_w1_breakdown", **d}
+
+
+def fetch_ho_weekly_breakdown(session: str) -> dict:
+    """Fetch per-WH weekly failure-timestamp breakdown using the richer CASE query (-3 months)."""
+    with open(_HO_WEEKLY_QUERY_FILE) as f:
+        query = json.load(f)
+    d = _post_dataset(session, query)
+    return {"id": "ho_weekly_breakdown", **d}
+
+
+def fetch_ho_daily_breakdown(session: str) -> dict:
+    """Fetch per-WH daily failure-timestamp breakdown using the richer CASE query (-7 days)."""
+    with open(_HO_DAILY_QUERY_FILE) as f:
+        query = json.load(f)
+    d = _post_dataset(session, query)
+    return {"id": "ho_daily_breakdown", **d}
 
 
 def fetch_ho_daily(session: str) -> dict:
@@ -194,10 +213,12 @@ def main():
     print("\n[2/2] Happy Orders Scorecard…")
     ho_data = fetch_all(HO_QUESTIONS, "HO")
     session = load_token()
-    print("  → HO W-1 breakdown (richer CASE query)…", flush=True)
+    print("  → HO W-1 breakdown (richer CASE query · last 1 week)…", flush=True)
     ho_data.append(fetch_ho_w1_breakdown(session))
-    print("  → HO daily breakdown (card 26829 · day)…", flush=True)
-    ho_data.append(fetch_ho_daily(session))
+    print("  → HO weekly breakdown (richer CASE query · last 3 months)…", flush=True)
+    ho_data.append(fetch_ho_weekly_breakdown(session))
+    print("  → HO daily breakdown (richer CASE query · last 7 days)…", flush=True)
+    ho_data.append(fetch_ho_daily_breakdown(session))
     ho_path = save(ho_data, "ho_data.json")
     print(f"  ✓ {ho_path}")
 
