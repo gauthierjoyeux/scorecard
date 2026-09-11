@@ -336,6 +336,8 @@ section { background: white; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,
           padding: 20px 22px; margin-bottom: 24px; }
 section h2 { font-size: 1rem; color: #1A237E; margin-bottom: 4px; }
 section h3 { font-size: 1rem; color: #1A237E; margin-bottom: 4px; }
+a.title-link { color: inherit; text-decoration: none; }
+a.title-link:hover { text-decoration: underline; opacity: .8; }
 section h4 { font-size: .85rem; color: #444; margin-bottom: 8px; }
 .subtitle  { font-size: .78rem; color: #888; margin-bottom: 14px; }
 
@@ -616,13 +618,13 @@ function renderWhTab(wh) {
     </section>
 
     <section>
-      <h3>First Failure Breakdown by Week — ${wh}</h3>
+      <h3><a href="https://metabase.internal.bigblue.co/question/29962-failure-timestamp-per-day-week-12" target="_blank" rel="noopener" class="title-link">First Failure Breakdown by Week — ${wh}</a></h3>
       <p class="subtitle">% of orders per failure bucket, by week. Buckets 1–6 are WH-actionable (orange).</p>
       <div class="table-wrap" id="wkb-${wh}"></div>
     </section>
 
     <section>
-      <h3>First Failure Breakdown by Day — W-1 — ${wh}</h3>
+      <h3><a href="https://metabase.internal.bigblue.co/question/27734-failure-timestamp-per-day-week-1" target="_blank" rel="noopener" class="title-link">First Failure Breakdown by Day — W-1 — ${wh}</a></h3>
       <p class="subtitle">Daily breakdown for the last 14 days. Buckets 1–6 are WH-actionable (orange).</p>
       <div class="table-wrap" id="dayb-${wh}"></div>
     </section>
