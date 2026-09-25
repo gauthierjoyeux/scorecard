@@ -349,6 +349,9 @@ def main():
 
     for q in SCORECARD_QUESTIONS:
         print(f"  • {q['name']}...")
+        if q["id"] not in cache:
+            print(f"    ↳ card {q['id']} missing from data (fetch failed), skipping")
+            continue
         record = cache[q["id"]]
         pivot  = prepare_pivot(record, q, N_WEEKS)
         if pivot.empty:
